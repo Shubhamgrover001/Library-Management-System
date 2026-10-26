@@ -435,7 +435,7 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
     <!-- BOOKS -->
     <section id="view-books" class="view-section">
       <div class="card">
-        <div class="card-title"><span>📚 Book Inventory Management</span><button class="btn-primary" onclick="openBookModalForAdd()">+ Add New Book</button></div>
+        <div class="card-title"><span>📚 Book Inventory Management</span><input type="text" id="bookSearch" placeholder="🔍 Search title, author, genre, ISBN..." oninput="renderBooks()" style="max-width:280px;" /><button class="btn-primary" onclick="openBookModalForAdd()">+ Add New Book</button></div>
         <table>
           <thead><tr><th>🏷 ISBN</th><th>📚 Title</th><th>✍️ Author</th><th>🏷 Genre</th><th>📦 Available / Total</th><th>⚙️ Action</th></tr></thead>
           <tbody id="bookTableBody"></tbody>
@@ -446,7 +446,7 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
     <!-- MEMBERS -->
     <section id="view-members" class="view-section">
       <div class="card">
-        <div class="card-title"><span>👥 Registered Members Directory</span><button class="btn-primary" onclick="openMemberModalForAdd()">+ Register Member</button></div>
+        <div class="card-title"><span>👥 Registered Members Directory</span><input type="text" id="memberSearch" placeholder="🔍 Search name, email, ID..." oninput="renderMembers()" style="max-width:260px;" /><button class="btn-primary" onclick="openMemberModalForAdd()">+ Register Member</button></div>
         <table>
           <thead><tr><th>🏷 Member ID</th><th>👤 Full Name</th><th>📧 Email</th><th>📞 Contact</th><th>📚 Books on Loan</th><th>⚙️ Action</th></tr></thead>
           <tbody id="memberTableBody"></tbody>
@@ -466,10 +466,26 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
         <button class="btn-primary" onclick="openReturnFromLoanSelect()">🔄 Process Return &amp; Collect Fine</button>
       </div>
       <div class="card">
-        <div class="card-title">📜 All Transactions</div>
+        <div class="card-title"><span>📜 All Transactions</span><span style="display:flex; gap:8px;"><input type="text" id="txnSearch" placeholder="🔍 Search..." oninput="renderAllTxns()" style="max-width:200px;" /><select id="txnStatus" onchange="renderAllTxns()" style="max-width:130px;"><option value="">All</option><option>Issued</option><option>Overdue</option><option>Returned</option></select></span></div>
         <table>
           <thead><tr><th>🏷 Txn ID</th><th>👤 Member</th><th>📚 Book Title</th><th>📊 Status</th><th>📅 Issued</th><th>📅 Due</th><th>💰 Fine</th></tr></thead>
           <tbody id="allTxnBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- FINES -->
+    <section id="view-fines" class="view-section">
+      <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="stat-card"><div class="label">Fines Collected <span class="stat-icon">💵</span></div><div class="val" id="finePaid">₹0.00</div></div>
+        <div class="stat-card"><div class="label">Fines Waived <span class="stat-icon">🎁</span></div><div class="val" id="fineWaived">₹0.00</div></div>
+        <div class="stat-card"><div class="label">Outstanding (Overdue) <span class="stat-icon">🚨</span></div><div class="val" style="color: var(--danger);" id="fineOutstanding">₹0.00</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">💰 Fine Payment History</div>
+        <table>
+          <thead><tr><th>🏷 Txn ID</th><th>👤 Member</th><th>📚 Book</th><th>📅 Returned</th><th>⏳ Days Late</th><th>💰 Fine</th><th>💳 Payment</th></tr></thead>
+          <tbody id="fineHistoryBody"></tbody>
         </table>
       </div>
     </section>
@@ -740,12 +756,12 @@ function logoutSession() {
 }
 
 const NAV = {
-  admin: [['dashboard', '📊 Dashboard'], ['books', '📖 Books Catalog'], ['members', '👥 Member Directory'], ['transactions', '🔄 Issue & Return'], ['settings', '⚙️ Settings & Security']],
-  librarian: [['dashboard', '📊 Dashboard'], ['books', '📖 Books Catalog'], ['transactions', '🔄 Issue & Return'], ['settings', '⚙️ Settings & Security']],
+  admin: [['dashboard', '📊 Dashboard'], ['books', '📖 Books Catalog'], ['members', '👥 Member Directory'], ['transactions', '🔄 Issue & Return'], ['fines', '💰 Fines & Payments'],['settings', '⚙️ Settings & Security']],
+  librarian: [['dashboard', '📊 Dashboard'], ['books', '📖 Books Catalog'], ['transactions', '🔄 Issue & Return'], ['fines', '💰 Fines & Payments'],['settings', '⚙️ Settings & Security']],
   user: [['user-portal', '📖 E-Books Catalog'], ['user-loans', '📌 My Loans & Hold'], ['user-wishlist', '⭐ Saved Wishlist'], ['settings', '⚙️ Settings & Security']]
 };
 const TITLES = {
-  dashboard: 'Library Overview', books: 'Book Catalog & Inventory', members: 'Member Directory', transactions: 'Issue & Return Portal',
+  dashboard: 'Library Overview', books: 'Book Catalog & Inventory', members: 'Member Directory', transactions: 'Issue & Return Portal', fines: 'Fines & Payments',
   'user-portal': 'My Member Reading Portal', 'user-loans': 'My Loans & Hold Queue', 'user-wishlist': 'Saved Wishlist Books', settings: 'Account Settings & Security'
 };
 function setupRole(user) {
@@ -823,7 +839,7 @@ async function verifyCodeAndComplete() {
 function renderAll() {
   if (!db) return;
   renderStats(); renderAnalytics(); renderDashCatalog(); renderAudit(); renderBooks(); renderMembers();
-  renderLoanSelect(); renderOverdue(); renderAllTxns(); renderLists(); renderUserViews();
+  renderLoanSelect(); renderOverdue(); renderAllTxns(); renderFines(); renderLists(); renderUserViews();
 }
 function renderStats() {
   const today = todayISO();
@@ -872,12 +888,24 @@ function renderAudit() {
   $('auditTableBody').innerHTML = rows || '<tr><td colspan="6" class="empty">No transactions yet</td></tr>';
 }
 function renderAllTxns() {
-  const rows = db.txns.slice().reverse().map(t =>
+  const q = $('txnSearch').value.toLowerCase().trim(), st = $('txnStatus').value;
+  const rows = db.txns.slice().reverse().filter(t => (!st || statusOf(t) === st) && (!q || [t.id, memberName(t.memberId), bookTitle(t.isbn)].join(' ').toLowerCase().includes(q))).map(t =>
     `<tr><td>${esc(t.id)}</td><td>${esc(memberName(t.memberId))}</td><td>${esc(bookTitle(t.isbn))}</td><td>${badge(statusOf(t))}</td><td>${esc(fmtDate(t.issueDate))}</td><td>${esc(fmtDate(t.dueDate))}</td><td>${esc(fineCell(t))}</td></tr>`).join('');
   $('allTxnBody').innerHTML = rows || '<tr><td colspan="7" class="empty">No transactions yet</td></tr>';
 }
+function renderFines() {
+  const done = db.txns.filter(t => t.status === 'Returned' && t.fine > 0);
+  const waived = done.filter(t => t.payMode === 'Waived Off'), paid = done.filter(t => t.payMode !== 'Waived Off');
+  const sum = a => a.reduce((s, t) => s + t.fine, 0);
+  $('finePaid').textContent = money(sum(paid));
+  $('fineWaived').textContent = money(sum(waived));
+  $('fineOutstanding').textContent = money(activeTxns().reduce((s, t) => s + fineOf(t), 0));
+  $('fineHistoryBody').innerHTML = done.slice().sort((a, b) => b.returnDate.localeCompare(a.returnDate)).map(t =>
+    `<tr><td>${esc(t.id)}</td><td>${esc(memberName(t.memberId))}</td><td>${esc(bookTitle(t.isbn))}</td><td>${esc(fmtDate(t.returnDate))}</td><td>${t.fine / FINE_PER_DAY}</td><td>${money(t.fine)}</td><td>${esc(t.payMode || '-')}</td></tr>`).join('') || '<tr><td colspan="7" class="empty">No fines recorded yet</td></tr>';
+}
 function renderBooks() {
-  const rows = db.books.map(b => {
+  const q = $('bookSearch').value.toLowerCase().trim();
+  const rows = db.books.filter(b => !q || [b.title, b.author, b.genre, b.isbn].join(' ').toLowerCase().includes(q)).map(b => {
     const s = bookStats(b);
     return `<tr class="clickable-row" data-action="book-detail" data-isbn="${esc(b.isbn)}"><td>${esc(b.isbn)}</td><td>${esc(b.title)}</td><td>${esc(b.author)}</td><td>${esc(b.genre)}</td><td>${s.avail} / ${b.total}</td>
       <td><button class="btn-outline" style="padding:4px 8px; margin-right:4px;" data-action="edit-book" data-isbn="${esc(b.isbn)}">Edit</button><button class="btn-danger-action" data-action="delete-book" data-isbn="${esc(b.isbn)}">Delete</button></td></tr>`;
@@ -885,7 +913,8 @@ function renderBooks() {
   $('bookTableBody').innerHTML = rows || '<tr><td colspan="6" class="empty">No books in inventory</td></tr>';
 }
 function renderMembers() {
-  const rows = db.members.map(m =>
+  const q = $('memberSearch').value.toLowerCase().trim();
+  const rows = db.members.filter(m => !q || [m.name, m.email, m.id].join(' ').toLowerCase().includes(q)).map(m =>
     `<tr><td>${esc(m.id)}</td><td>${esc(m.name)}</td><td>${esc(m.email)}</td><td>+91 ${esc(m.contact)}</td><td>${loansOf(m.id)}</td>
       <td><button class="btn-outline" style="padding:4px 8px; margin-right:4px;" data-action="edit-member" data-id="${esc(m.id)}">Edit</button><button class="btn-danger-action" data-action="delete-member" data-id="${esc(m.id)}">Delete</button></td></tr>`).join('');
   $('memberTableBody').innerHTML = rows || '<tr><td colspan="6" class="empty">No members registered</td></tr>';
