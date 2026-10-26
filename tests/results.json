@@ -1,0 +1,182 @@
+{
+  "date": "2026-10-26T23:43:36.121Z",
+  "pass": 35,
+  "total": 35,
+  "results": [
+    {
+      "id": "T01",
+      "name": "Admin login shows dashboard stats (9 books, 3 issued, 3 members, 1 overdue)",
+      "pass": true
+    },
+    {
+      "id": "T02",
+      "name": "Admin sees 6 menu items; CSV export visible",
+      "pass": true
+    },
+    {
+      "id": "T03",
+      "name": "Add book with price appears in inventory; bad ISBN rejected",
+      "pass": true
+    },
+    {
+      "id": "T04",
+      "name": "Issue book reduces availability and raises issued count",
+      "pass": true
+    },
+    {
+      "id": "T05",
+      "name": "Same member cannot borrow the same book twice",
+      "pass": true
+    },
+    {
+      "id": "T06",
+      "name": "Issue blocked when no copies are available (Clean Code: 2/2 out)",
+      "pass": true
+    },
+    {
+      "id": "T07",
+      "name": "Returning the 15-day-overdue loan charges Rs 150 and logs it in Fines",
+      "pass": true
+    },
+    {
+      "id": "T08",
+      "name": "Waived fine is tracked separately from collected fine",
+      "pass": true
+    },
+    {
+      "id": "T09",
+      "name": "XSS: script payload in book title is rendered as text, not executed",
+      "pass": true
+    },
+    {
+      "id": "T10",
+      "name": "CSV export contains header and transaction rows",
+      "pass": true
+    },
+    {
+      "id": "T11",
+      "name": "Staff cannot delete a book that is currently on loan",
+      "pass": true
+    },
+    {
+      "id": "T12",
+      "name": "Member directory: duplicate email blocked",
+      "pass": true
+    },
+    {
+      "id": "T13",
+      "name": "Login brute-force lockout after 5 failed attempts",
+      "pass": true
+    },
+    {
+      "id": "T14",
+      "name": "Librarian sees 5 items and no Member Directory",
+      "pass": true
+    },
+    {
+      "id": "T15",
+      "name": "Admin uploads 15-page PDF to a book; oversize (>12 MB) and fake PDFs rejected",
+      "pass": true
+    },
+    {
+      "id": "T16",
+      "name": "Reader self-registration: wrong OTP rejected, correct OTP creates member MEM-104",
+      "pass": true
+    },
+    {
+      "id": "T17",
+      "name": "Reader logs in by Member ID and sees 5 reader menu items",
+      "pass": true
+    },
+    {
+      "id": "T18",
+      "name": "Free preview PDF contains exactly 7 of 15 pages",
+      "pass": true
+    },
+    {
+      "id": "T19",
+      "name": "Download is blocked without subscription or purchase",
+      "pass": true
+    },
+    {
+      "id": "T20",
+      "name": "Buying a book adds it to My Library as Owned and logs Rs 99 payment; full 15 pages readable",
+      "pass": true
+    },
+    {
+      "id": "T21",
+      "name": "Monthly subscription (Rs 149) activates for 30 days",
+      "pass": true
+    },
+    {
+      "id": "T22",
+      "name": "Hold request for a fully-loaned book is created and can be cancelled",
+      "pass": true
+    },
+    {
+      "id": "T23",
+      "name": "Wishlist add and remove",
+      "pass": true
+    },
+    {
+      "id": "T24",
+      "name": "Expired subscription falls back to preview mode",
+      "pass": true
+    },
+    {
+      "id": "T25",
+      "name": "Password change works and old password stops working",
+      "pass": true
+    },
+    {
+      "id": "T26",
+      "name": "Data and session persist across page reload",
+      "pass": true
+    },
+    {
+      "id": "T27",
+      "name": "Dark theme toggle persists after reload",
+      "pass": true
+    },
+    {
+      "id": "A01",
+      "name": "Sidebar items are keyboard-focusable",
+      "pass": true
+    },
+    {
+      "id": "A02",
+      "name": "Enter key activates a sidebar item",
+      "pass": true
+    },
+    {
+      "id": "A03",
+      "name": "Toast is an aria-live status region",
+      "pass": true
+    },
+    {
+      "id": "A04",
+      "name": "Modals expose role=dialog and aria-modal",
+      "pass": true
+    },
+    {
+      "id": "A05",
+      "name": "Escape closes an open modal",
+      "pass": true
+    },
+    {
+      "id": "A06",
+      "name": "Password visibility toggles have accessible names",
+      "pass": true
+    },
+    {
+      "id": "A07",
+      "name": "Clickable table rows are keyboard-focusable",
+      "pass": true
+    },
+    {
+      "id": "A08",
+      "name": "No uncaught JavaScript errors during the whole run",
+      "pass": true
+    }
+  ]
+}

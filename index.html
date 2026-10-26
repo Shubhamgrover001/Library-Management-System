@@ -151,7 +151,7 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
       <label for="authPassword">🔑 Secure Passcode</label>
       <div class="password-wrapper">
         <input type="password" id="authPassword" placeholder="Enter your password" autocomplete="current-password" />
-        <button type="button" class="toggle-password" data-action="toggle-pw" data-target="authPassword">👁</button>
+        <button type="button" class="toggle-password" aria-label="Show or hide password" data-action="toggle-pw" data-target="authPassword">👁</button>
       </div>
     </div>
     <div class="btn-group" style="margin-top: 20px;">
@@ -186,14 +186,14 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
       <label>🔒 Create Password (min 6 characters)</label>
       <div class="password-wrapper">
         <input type="password" id="pubRegPass" placeholder="Set your account password" autocomplete="new-password" />
-        <button type="button" class="toggle-password" data-action="toggle-pw" data-target="pubRegPass">👁</button>
+        <button type="button" class="toggle-password" aria-label="Show or hide password" data-action="toggle-pw" data-target="pubRegPass">👁</button>
       </div>
     </div>
     <div class="form-group">
       <label>🔒 Confirm Password</label>
       <div class="password-wrapper">
         <input type="password" id="pubRegConfirmPass" placeholder="Re-enter your password" autocomplete="new-password" />
-        <button type="button" class="toggle-password" data-action="toggle-pw" data-target="pubRegConfirmPass">👁</button>
+        <button type="button" class="toggle-password" aria-label="Show or hide password" data-action="toggle-pw" data-target="pubRegConfirmPass">👁</button>
       </div>
     </div>
     <div class="btn-group">
@@ -218,7 +218,7 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
   </div>
 </div>
 
-<div id="toast" class="toast"></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <!-- IN-PAGE CONFIRM (native confirm() can be blocked by browsers/previews) -->
 <div id="confirmModal" class="modal-backdrop" style="z-index: 9999990;">
@@ -353,7 +353,7 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
 </div>
 
 <aside>
-  <div class="brand-container" data-action="nav" data-view="home" title="Go to Dashboard">
+  <div class="brand-container" role="button" tabindex="0" aria-label="Go to dashboard" data-action="nav" data-view="home" title="Go to Dashboard">
     <img src="logo.png" alt="LMS Portal" onload="this.nextElementSibling.style.display='none'" onerror="this.remove()" />
     <span class="brand-text">📚 LMS Portal</span>
   </div>
@@ -388,7 +388,7 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
         <div class="stat-card"><div class="label">Total Collection <span class="stat-icon">📚</span></div><div class="val" id="statBooks">0</div></div>
         <div class="stat-card"><div class="label">Issued Books <span class="stat-icon">🔄</span></div><div class="val" id="statIssued">0</div></div>
         <div class="stat-card"><div class="label">Active Members <span class="stat-icon">👥</span></div><div class="val" id="statMembers">0</div></div>
-        <div class="stat-card clickable" onclick="openOverdueModal()" title="Click to view Overdue List">
+        <div class="stat-card clickable" role="button" tabindex="0" onclick="openOverdueModal()" title="Click to view Overdue List">
           <div class="label">Overdue Alerts <span class="stat-icon">🚨</span></div>
           <div class="val" style="color: var(--danger);" id="statOverdue">0</div>
         </div>
@@ -600,13 +600,13 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
 
         <h4 style="font-size: 0.95rem; color: var(--text-heading); margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 6px;">🔒 Password Reset &amp; Security</h4>
         <div class="form-group"><label>🔑 Current Password</label>
-          <div class="password-wrapper"><input type="password" id="currentPassInput" placeholder="Enter current password" autocomplete="current-password" /><button type="button" class="toggle-password" data-action="toggle-pw" data-target="currentPassInput">👁</button></div>
+          <div class="password-wrapper"><input type="password" id="currentPassInput" placeholder="Enter current password" autocomplete="current-password" /><button type="button" class="toggle-password" aria-label="Show or hide password" data-action="toggle-pw" data-target="currentPassInput">👁</button></div>
         </div>
         <div class="form-group"><label>🔑 New Password</label>
-          <div class="password-wrapper"><input type="password" id="newPassInput" placeholder="Enter new password" autocomplete="new-password" /><button type="button" class="toggle-password" data-action="toggle-pw" data-target="newPassInput">👁</button></div>
+          <div class="password-wrapper"><input type="password" id="newPassInput" placeholder="Enter new password" autocomplete="new-password" /><button type="button" class="toggle-password" aria-label="Show or hide password" data-action="toggle-pw" data-target="newPassInput">👁</button></div>
         </div>
         <div class="form-group"><label>🔑 Confirm New Password</label>
-          <div class="password-wrapper"><input type="password" id="confirmPassInput" placeholder="Confirm new password" autocomplete="new-password" /><button type="button" class="toggle-password" data-action="toggle-pw" data-target="confirmPassInput">👁</button></div>
+          <div class="password-wrapper"><input type="password" id="confirmPassInput" placeholder="Confirm new password" autocomplete="new-password" /><button type="button" class="toggle-password" aria-label="Show or hide password" data-action="toggle-pw" data-target="confirmPassInput">👁</button></div>
         </div>
         <div style="margin-bottom: 24px;"><button class="btn-primary" onclick="handlePasswordReset()">🔒 Reset Password Securely</button></div>
 
@@ -765,13 +765,21 @@ function saveRecentLogin(id) {
   saved = [id].concat(saved.filter(x => x !== id)).slice(0, 4);
   ls.set(RECENT_KEY, JSON.stringify(saved));
 }
+const loginLock = { fails: 0, until: 0 }; // client-side brute-force slow-down (demo; a real server must enforce this)
 async function handleSecureLogin() {
   const id = $('authUsername').value.trim().toLowerCase();
   const pw = $('authPassword').value;
   if (!id || !pw) { toast('Please enter both User ID and Password!'); return; }
+  const wait = Math.ceil((loginLock.until - Date.now()) / 1000);
+  if (wait > 0) { toast(`🔒 Too many failed attempts. Try again in ${wait}s.`); return; }
   const user = db.users.find(u => u.id === id || (u.memberId && u.memberId.toLowerCase() === id));
   const ok = user && (await hashPw(pw, user.salt)) === user.hash;
-  if (!ok) { toast('❌ Invalid User ID or password.'); return; }
+  if (!ok) {
+    if (++loginLock.fails >= 5) { loginLock.fails = 0; loginLock.until = Date.now() + 30000; toast('🔒 Too many failed attempts. Login locked for 30 seconds.'); }
+    else toast('❌ Invalid User ID or password.');
+    return;
+  }
+  loginLock.fails = 0;
   saveRecentLogin(user.id);
   ls.set(SESSION_KEY, user.id);
   $('authPassword').value = '';
@@ -821,7 +829,7 @@ function setupRole(user) {
   $('settingsEmail').value = user.id;
   $('exportCsvBtn').style.display = user.role === 'admin' ? '' : 'none';
   $('userPortalName').textContent = user.name;
-  $('sidebarNav').innerHTML = NAV[user.role].map(([v, label]) => `<a data-action="nav" data-view="${v}">${esc(label)}</a>`).join('');
+  $('sidebarNav').innerHTML = NAV[user.role].map(([v, label]) => `<a role="button" tabindex="0" data-action="nav" data-view="${v}">${esc(label)}</a>`).join('');
   setDefaultDates();
   switchView(NAV[user.role][0][0]);
 }
@@ -921,7 +929,7 @@ function renderDashCatalog() {
     const status = s.avail > 0
       ? '<span class="badge badge-success">Available</span>'
       : `<span class="badge badge-warning">Issued</span> <button class="btn-top" style="padding:2px 6px; margin-left:4px;" data-action="reserve" data-isbn="${esc(b.isbn)}">📌 Reserve</button>`;
-    return `<tr class="clickable-row" data-action="book-detail" data-isbn="${esc(b.isbn)}"><td>${esc(b.title)}</td><td>${esc(b.author)}</td><td>${status}</td></tr>`;
+    return `<tr class="clickable-row" tabindex="0" data-action="book-detail" data-isbn="${esc(b.isbn)}"><td>${esc(b.title)}</td><td>${esc(b.author)}</td><td>${status}</td></tr>`;
   }).join('');
   $('dashboardCatalogBody').innerHTML = rows || '<tr><td colspan="3" class="empty">No books found</td></tr>';
 }
@@ -955,7 +963,7 @@ function renderBooks() {
   const q = $('bookSearch').value.toLowerCase().trim();
   const rows = db.books.filter(b => !q || [b.title, b.author, b.genre, b.isbn].join(' ').toLowerCase().includes(q)).map(b => {
     const s = bookStats(b);
-    return `<tr class="clickable-row" data-action="book-detail" data-isbn="${esc(b.isbn)}"><td>${esc(b.isbn)}</td><td>${esc(b.title)}${b.hasPdf ? ' 📄' : ''}</td><td>${esc(b.author)}</td><td>${esc(b.genre)}</td><td>${s.avail} / ${b.total}</td><td>₹${priceOf(b)}</td>
+    return `<tr class="clickable-row" tabindex="0" data-action="book-detail" data-isbn="${esc(b.isbn)}"><td>${esc(b.isbn)}</td><td>${esc(b.title)}${b.hasPdf ? ' 📄' : ''}</td><td>${esc(b.author)}</td><td>${esc(b.genre)}</td><td>${s.avail} / ${b.total}</td><td>₹${priceOf(b)}</td>
       <td><button class="btn-outline" style="padding:4px 8px; margin-right:4px;" data-action="edit-book" data-isbn="${esc(b.isbn)}">Edit</button><button class="btn-danger-action" data-action="delete-book" data-isbn="${esc(b.isbn)}">Delete</button></td></tr>`;
   }).join('');
   $('bookTableBody').innerHTML = rows || '<tr><td colspan="7" class="empty">No books in inventory</td></tr>';
@@ -1532,12 +1540,26 @@ document.addEventListener('click', e => {
   const el = e.target.closest('[data-action]');
   if (el && ACTIONS[el.dataset.action]) ACTIONS[el.dataset.action](el);
 });
+const MODAL_CLOSERS = { checkoutModal: closeCheckout, pdfViewerModal: closePdfViewer, bookModal: closeBookModal, memberModal: closeMemberModal, publicRegisterModal: closePublicRegisterModal };
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && (e.target.id === 'authUsername' || e.target.id === 'authPassword')) handleSecureLogin();
+  if (e.key === 'Escape') { // close the top-most open dialog
+    const open = [...document.querySelectorAll('.modal-backdrop')].filter(m => m.style.display === 'flex');
+    open.sort((a, b) => (+getComputedStyle(a).zIndex || 0) - (+getComputedStyle(b).zIndex || 0));
+    const top = open.pop(); if (!top) return;
+    if (top.id === 'confirmModal') $('confirmNo').click();
+    else if (MODAL_CLOSERS[top.id]) MODAL_CLOSERS[top.id]();
+    else top.style.display = 'none';
+  }
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[role=button][tabindex], .clickable-row')) { e.preventDefault(); e.target.click(); }
 });
 
 /* ================= BOOT ================= */
 window.addEventListener('DOMContentLoaded', async () => {
+  document.querySelectorAll('.modal-backdrop').forEach(m => { // screen-reader semantics for dialogs
+    m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true');
+    const h = m.querySelector('h3'); if (h) m.setAttribute('aria-label', h.textContent.trim());
+  });
   applyTheme(ls.get(THEME_KEY) === 'dark' ? 'dark' : 'light');
   db = loadDb();
   if (!db) { db = await seedDb(); saveDb(); }
