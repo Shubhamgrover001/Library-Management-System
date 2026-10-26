@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Library Management System - LMS Portal</title>
+<style>
+:root {
+  --primary: #0284c7; --primary-hover: #0369a1; --secondary: #0b1329; --bg: #f8fafc;
+  --card-bg: #ffffff; --text: #334155; --text-heading: #0f172a; --border: #e2e8f0;
+  --accent: #38bdf8; --success: #16a34a; --danger: #dc2626; --warning: #d97706;
+  --header-bg: #ffffff; --table-header: #f8fafc; --input-bg: #ffffff;
+  --calendar-filter: invert(0.2) sepia(100%) saturate(400%) hue-rotate(180deg);
+}
+[data-theme="dark"] {
+  --primary: #38bdf8; --primary-hover: #0ea5e9; --secondary: #030712; --bg: #0f172a;
+  --card-bg: #1e293b; --text: #cbd5e1; --text-heading: #f8fafc; --border: #334155;
+  --accent: #0284c7; --success: #22c55e; --danger: #ef4444; --warning: #f59e0b;
+  --header-bg: #1e293b; --table-header: #0f172a; --input-bg: #0f172a;
+  --calendar-filter: invert(1) brightness(1.8) drop-shadow(0 0 2px rgba(56, 189, 248, 0.8));
+}
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+body { background-color: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; transition: background 0.3s, color 0.3s; }
+input[type="date"]::-webkit-calendar-picker-indicator { filter: var(--calendar-filter); cursor: pointer; padding: 6px; border-radius: 4px; transition: transform 0.2s; }
+input[type="date"]::-webkit-calendar-picker-indicator:hover { transform: scale(1.15); }
+#splash-screen { position: fixed; inset: 0; z-index: 9999999; background: #060a14; display: flex; align-items: center; justify-content: center; opacity: 1; visibility: visible; transition: opacity 0.6s ease, visibility 0.6s ease; }
+#splash-screen.fade-out { opacity: 0; visibility: hidden; pointer-events: none; }
+#splash-screen video { width: 100%; height: 100%; max-width: 650px; max-height: 650px; object-fit: contain; background: #060a14; }
+#auth-screen { position: fixed; inset: 0; z-index: 999998; background: #060a14; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.auth-card { background: #1e293b; color: #f8fafc; width: 100%; max-width: 420px; padding: 32px; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); border: 1px solid #334155; }
+.auth-card h2 { margin-bottom: 8px; font-size: 1.5rem; color: #38bdf8; }
+.auth-card p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 24px; }
+.auth-card label { color: #cbd5e1; }
+.auth-card input { background: #0f172a; color: #fff; border: 1px solid #334155; }
+.demo-hint { margin-top: 16px; font-size: 0.74rem; color: #94a3b8; background: #0f172a; border: 1px dashed #334155; border-radius: 6px; padding: 8px 10px; line-height: 1.5; }
+.password-wrapper { position: relative; width: 100%; display: flex; align-items: center; }
+.password-wrapper input { width: 100%; padding-right: 42px !important; }
+.toggle-password { position: absolute; right: 12px; background: none; border: none; cursor: pointer; font-size: 1.1rem; color: #94a3b8; padding: 2px; z-index: 10; }
+.toggle-password:hover { color: #38bdf8; }
+.phone-input-group { display: flex; align-items: center; border: 1px solid var(--border); border-radius: 6px; background: var(--input-bg); overflow: hidden; }
+.country-code { background: rgba(2, 132, 199, 0.1); color: var(--primary); padding: 9px 12px; font-weight: 600; font-size: 0.88rem; border-right: 1px solid var(--border); white-space: nowrap; }
+.phone-input-group input { border: none !important; outline: none !important; background: transparent !important; }
+.recent-logins-box { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+.recent-chip { background: #0f172a; color: #38bdf8; border: 1px solid #334155; padding: 4px 10px; border-radius: 9999px; font-size: 0.75rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; }
+.recent-chip:hover { background: #38bdf8; color: #0f172a; border-color: #38bdf8; }
+aside { width: 270px; background: var(--secondary); color: #fff; display: flex; flex-direction: column; border-right: 1px solid var(--border); transition: width 0.3s; }
+.brand-container { width: 100%; height: 120px; padding: 10px; display: flex; justify-content: center; align-items: center; border-bottom: 1px solid var(--border); background: #060a14; overflow: hidden; cursor: pointer; }
+.brand-container img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.4)); transition: transform 0.2s; }
+.brand-container:hover img { transform: scale(1.05); }
+.brand-text { color: #38bdf8; font-weight: 700; font-size: 1.3rem; letter-spacing: 0.5px; }
+nav { margin-top: 16px; flex: 1; overflow-y: auto; }
+nav a { display: flex; align-items: center; gap: 14px; padding: 12px 20px; color: #94a3b8; text-decoration: none; font-size: 0.95rem; font-weight: 500; cursor: pointer; transition: all 0.2s; border-left: 4px solid transparent; }
+nav a:hover, nav a.active { color: #ffffff; background-color: #131f37; border-left: 4px solid var(--accent); }
+.user-profile { padding: 16px 20px; border-top: 1px solid var(--border); background: #060a14; display: flex; flex-direction: column; gap: 8px; }
+.user-info-row { display: flex; align-items: center; gap: 12px; font-size: 0.85rem; }
+.user-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: bold; color: #fff; flex-shrink: 0; }
+.role-switcher { background: #1e293b; color: var(--accent); border: 1px solid var(--border); padding: 6px 8px; font-size: 0.75rem; border-radius: 4px; cursor: pointer; width: 100%; text-align: center; }
+main { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--bg); }
+header { background: var(--header-bg); border-bottom: 1px solid var(--border); padding: 16px 32px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; transition: background 0.3s; }
+.header-title h2 { color: var(--text-heading); font-size: 1.35rem; }
+.status-area { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.btn-top { background: var(--card-bg); color: var(--text); padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; }
+.btn-top:hover { opacity: 0.85; }
+.status-tag { font-size: 0.8rem; padding: 4px 12px; background: #e0f2fe; color: #0369a1; border-radius: 9999px; font-weight: 600; border: 1px solid #bae6fd; }
+.content { padding: 28px 32px; }
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 24px; }
+.stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 20px; transition: background 0.3s; position: relative; }
+.stat-card.clickable { cursor: pointer; transition: transform 0.2s, border-color 0.2s; }
+.stat-card.clickable:hover { transform: translateY(-2px); border-color: var(--danger); }
+.stat-card .label { font-size: 0.82rem; color: var(--text); opacity: 0.7; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+.stat-card .val { font-size: 1.75rem; font-weight: 700; color: var(--text-heading); margin-top: 6px; }
+.stat-icon { font-size: 1.25rem; opacity: 0.8; }
+.dashboard-layout { display: grid; grid-template-columns: 1fr 1.2fr; gap: 24px; margin-bottom: 24px; }
+.card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 22px; transition: background 0.3s; margin-bottom: 24px; overflow-x: auto; }
+.card-title { font-size: 1.05rem; font-weight: 600; color: var(--text-heading); margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+.form-group { margin-bottom: 14px; }
+label { display: block; font-size: 0.82rem; font-weight: 500; margin-bottom: 5px; color: var(--text); }
+.input-with-scan { display: flex; gap: 8px; }
+input[type="text"], input[type="number"], input[type="date"], input[type="password"], select { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.88rem; outline: none; background: var(--input-bg); color: var(--text); }
+input[readonly] { opacity: 0.75; cursor: not-allowed; }
+input:focus, select:focus { border-color: var(--primary); }
+.btn-scan { background: var(--text-heading); color: var(--card-bg); padding: 0 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; }
+.btn-scan:hover { opacity: 0.9; }
+.stock-hint { font-size: 0.78rem; color: var(--accent); background: rgba(56, 189, 248, 0.1); padding: 3px 8px; border-radius: 4px; margin-top: 4px; display: inline-block; font-weight: 500; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.btn-group { display: flex; gap: 12px; margin-top: 18px; flex-wrap: wrap; }
+button { cursor: pointer; font-weight: 500; padding: 9px 15px; border-radius: 6px; border: none; font-size: 0.88rem; }
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { opacity: 0.9; }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+.btn-outline:hover { background: rgba(100,100,100,0.1); }
+.btn-danger-action { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; padding: 4px 8px; border-radius: 4px; }
+.btn-danger-action:hover { background: #fecaca; }
+.btn-sm { padding: 4px 10px; font-size: 0.75rem; }
+table { width: 100%; border-collapse: collapse; font-size: 0.86rem; color: var(--text); min-width: 500px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+th { background-color: var(--table-header); color: var(--text); font-weight: 600; text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.5px; }
+.clickable-row { cursor: pointer; }
+.clickable-row:hover { background: rgba(2, 132, 199, 0.08); }
+.empty { text-align: center; opacity: 0.6; padding: 18px; }
+.badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; }
+.badge-success { background: #dcfce7; color: #15803d; }
+.badge-warning { background: #fef3c7; color: #b45309; }
+.badge-danger { background: #fee2e2; color: #b91c1c; }
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--text-heading); color: var(--card-bg); padding: 12px 20px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999999; font-size: 0.88rem; display: none; animation: slideUp 0.3s ease; max-width: 90vw; }
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); display: none; align-items: center; justify-content: center; z-index: 999999; padding: 16px; }
+.modal-card { background: var(--card-bg); color: var(--text); width: 100%; max-width: 440px; border-radius: 8px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto; }
+.modal-dark { background: #1e293b; color: #f8fafc; border: 1px solid #334155; }
+.modal-dark label { color: #cbd5e1; }
+.modal-dark input { background: #0f172a; color: #fff; border: 1px solid #334155; }
+.modal-wide { max-width: 750px; max-height: 80vh; display: flex; flex-direction: column; }
+.view-section { display: none; }
+.view-section.active { display: block; }
+@media (max-width: 768px) {
+  body { flex-direction: column; height: auto; overflow-y: auto; }
+  aside { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+  .brand-container { height: 80px; }
+  nav { display: flex; flex-wrap: wrap; margin-top: 0; }
+  nav a { flex: 1; min-width: 130px; padding: 10px 12px; font-size: 0.85rem; justify-content: center; border-left: none !important; border-bottom: 3px solid transparent; }
+  nav a:hover, nav a.active { border-left: none !important; border-bottom: 3px solid var(--accent); }
+  main { height: auto; overflow-y: visible; }
+  header { padding: 12px 16px; }
+  .content { padding: 16px; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .dashboard-layout { grid-template-columns: 1fr; gap: 16px; }
+  .row { grid-template-columns: 1fr; gap: 10px; }
+  .analytics-grid { grid-template-columns: 1fr !important; }
+}
+</style>
+</head>
+<body data-theme="light">
+
+<div id="splash-screen">
+  <video autoplay muted playsinline id="splashVideo">
+    <source src="Create_an_animation_video_of_.mp4" type="video/mp4" />
+  </video>
+</div>
+
+<!-- LOGIN -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <h2>🔐 LMS Portal Secure Login</h2>
+    <p>Enter your authorized User ID or Email and Passcode to proceed.</p>
+    <div class="form-group">
+      <label for="authUsername">🆔 User ID / Email</label>
+      <input type="text" id="authUsername" placeholder="e.g. admin@library.org or MEM-101" autocomplete="username" />
+      <div id="recentLoginsContainer" class="recent-logins-box"></div>
+    </div>
+    <div class="form-group">
+      <label for="authPassword">🔑 Secure Passcode</label>
+      <div class="password-wrapper">
+        <input type="password" id="authPassword" placeholder="Enter your password" autocomplete="current-password" />
+        <button type="button" class="toggle-password" data-action="toggle-pw" data-target="authPassword">👁</button>
+      </div>
+    </div>
+    <div class="btn-group" style="margin-top: 20px;">
+      <button class="btn-primary" style="flex:1;" onclick="handleSecureLogin()">🚀 Login to Portal</button>
+    </div>
+    <div style="margin-top: 16px; text-align: center;">
+      <span onclick="openPublicRegisterModal()" style="color: #38bdf8; font-size: 0.85rem; font-weight: 600; cursor: pointer; text-decoration: underline;">📝 New Reader? Register Online Account ➔</span>
+    </div>
+    <div class="demo-hint">
+      <b>Demo staff accounts</b><br>
+      admin@library.org / Admin@123<br>
+      librarian@library.org / Librarian@123
+    </div>
+  </div>
+</div>
+
+<!-- PUBLIC REGISTER -->
+<div id="publicRegisterModal" class="modal-backdrop">
+  <div class="modal-card modal-dark">
+    <h3 style="margin-bottom: 12px; color: #38bdf8;">📝 Online Member Self-Registration</h3>
+    <p style="font-size: 0.8rem; margin-bottom: 14px; color: #94a3b8;">Register instantly to access e-books, physical book requests, and download PDFs.</p>
+    <div class="form-group"><label>👤 Full Name</label><input type="text" id="pubRegName" placeholder="e.g. Ananya Roy" /></div>
+    <div class="form-group"><label>📧 Email Address</label><input type="text" id="pubRegEmail" placeholder="e.g. ananya@example.in" /></div>
+    <div class="form-group">
+      <label>📞 Contact Number (10 Digits)</label>
+      <div class="phone-input-group" style="background: #0f172a; border: 1px solid #334155;">
+        <span class="country-code">+91</span>
+        <input type="text" id="pubRegContact" placeholder="9876543210" maxlength="10" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label>🔒 Create Password (min 6 characters)</label>
+      <div class="password-wrapper">
+        <input type="password" id="pubRegPass" placeholder="Set your account password" autocomplete="new-password" />
+        <button type="button" class="toggle-password" data-action="toggle-pw" data-target="pubRegPass">👁</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>🔒 Confirm Password</label>
+      <div class="password-wrapper">
+        <input type="password" id="pubRegConfirmPass" placeholder="Re-enter your password" autocomplete="new-password" />
+        <button type="button" class="toggle-password" data-action="toggle-pw" data-target="pubRegConfirmPass">👁</button>
+      </div>
+    </div>
+    <div class="btn-group">
+      <button class="btn-primary" style="flex:1;" onclick="initiateRegistrationVerification()">✉️ Send Verification Code</button>
+      <button class="btn-outline" style="color: #cbd5e1; border-color: #334155;" onclick="closePublicRegisterModal()">❌ Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="emailVerifyModal" class="modal-backdrop">
+  <div class="modal-card modal-dark">
+    <h3 style="margin-bottom: 12px; color: #38bdf8;">✉️ Email Verification Required</h3>
+    <p style="font-size: 0.82rem; margin-bottom: 14px; color: #94a3b8;" id="verifyEmailInfo"></p>
+    <div class="form-group">
+      <label>🔢 Enter 6-Digit Verification Code</label>
+      <input type="text" id="verificationCodeInput" placeholder="e.g. 482910" maxlength="6" inputmode="numeric" style="text-align: center; font-size: 1.2rem; letter-spacing: 4px;" />
+    </div>
+    <div class="btn-group">
+      <button class="btn-primary" style="flex:1;" onclick="verifyCodeAndComplete()">✅ Verify &amp; Complete</button>
+      <button class="btn-outline" style="color: #cbd5e1; border-color: #334155;" onclick="$('emailVerifyModal').style.display='none'">❌ Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<!-- IN-PAGE CONFIRM (native confirm() can be blocked by browsers/previews) -->
+<div id="confirmModal" class="modal-backdrop" style="z-index: 9999990;">
+  <div class="modal-card" style="max-width: 380px;">
+    <h3 style="color: var(--text-heading); margin-bottom: 10px;">⚠️ Please confirm</h3>
+    <p id="confirmMsg" style="font-size: 0.92rem;"></p>
+    <div class="btn-group">
+      <button class="btn-primary" id="confirmYes" style="flex:1;">Yes</button>
+      <button class="btn-outline" id="confirmNo" style="flex:1;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- BOOK DETAILS -->
+<div id="bookDetailModal" class="modal-backdrop">
+  <div class="modal-card">
+    <h3 style="margin-bottom: 16px; color: var(--text-heading);">📖 Book Catalog Details</h3>
+    <div class="form-group"><label><b>🏷 ISBN Code:</b></label><div id="detIsbn" style="color: var(--text-heading);"></div></div>
+    <div class="form-group"><label><b>📚 Title:</b></label><div id="detTitle" style="color: var(--text-heading);"></div></div>
+    <div class="form-group"><label><b>✍️ Author:</b></label><div id="detAuthor" style="color: var(--text-heading);"></div></div>
+    <div class="form-group"><label><b>🏷 Genre:</b></label><div id="detGenre" style="color: var(--text-heading);"></div></div>
+    <div class="form-group"><label><b>📦 Stock Status:</b></label><div id="detCopies" style="color: var(--primary); font-weight: 600;"></div></div>
+    <div class="form-group" style="margin-top: 10px; background: rgba(56,189,248,0.08); padding: 10px; border-radius: 6px;">
+      <label style="color: var(--primary); font-weight:600;">📥 Digital E-Book Sheet</label>
+      <button class="btn-primary" style="margin-top: 6px; width: 100%; font-size: 0.8rem;" onclick="downloadBookPDF(detailIsbn)">📥 Download E-Book as PDF</button>
+    </div>
+    <div class="btn-group" style="margin-top: 20px;">
+      <button class="btn-primary" style="flex:1;" onclick="$('bookDetailModal').style.display='none'">❌ Close Details</button>
+    </div>
+  </div>
+</div>
+
+<!-- OVERDUE -->
+<div id="overdueModal" class="modal-backdrop">
+  <div class="modal-card modal-wide">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="color: var(--text-heading);">🚨 Overdue Members &amp; Fine Report</h3>
+      <button class="btn-outline" style="padding: 4px 10px;" onclick="$('overdueModal').style.display='none'">✕ Close</button>
+    </div>
+    <p style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 16px;">Members holding overdue books, with late fees calculated at ₹10 per day.</p>
+    <div style="overflow-y: auto; flex: 1;">
+      <table>
+        <thead><tr><th>👤 Member</th><th>📚 Book</th><th>✍️ Author</th><th>⏳ Overdue</th><th>💰 Fine</th><th>⚙️ Action</th></tr></thead>
+        <tbody id="overdueTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- BOOK FORM -->
+<div id="bookModal" class="modal-backdrop">
+  <div class="modal-card">
+    <h3 style="margin-bottom: 12px; color: var(--text-heading);" id="bookModalTitle">📖 Add New Book to Inventory</h3>
+    <div class="form-group"><label>🏷 ISBN Code</label><input type="text" id="newBookIsbn" placeholder="e.g. 978-0143425672" /></div>
+    <div class="form-group"><label>📚 Book Title</label><input type="text" id="newBookTitle" placeholder="e.g. Atomic Habits" /></div>
+    <div class="form-group"><label>✍️ Author Name</label><input type="text" id="newBookAuthor" placeholder="e.g. James Clear" /></div>
+    <div class="form-group"><label>🏷 Genre</label><input type="text" id="newBookGenre" placeholder="e.g. Self-Help" /></div>
+    <div class="form-group"><label>📚 Total Copies <span style="opacity:.7">(available copies are calculated from active loans)</span></label><input type="number" id="newBookCopies" value="1" min="1" /></div>
+    <div class="btn-group">
+      <button class="btn-primary" style="flex:1;" onclick="saveBookRecord()">💾 Save Book</button>
+      <button class="btn-outline" onclick="closeBookModal()">❌ Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- MEMBER FORM -->
+<div id="memberModal" class="modal-backdrop">
+  <div class="modal-card">
+    <h3 style="margin-bottom: 12px; color: var(--text-heading);" id="memberModalTitle">👤 Register New Member</h3>
+    <div class="form-group"><label>👤 Full Name</label><input type="text" id="newMemberName" placeholder="e.g. Ananya Roy" /></div>
+    <div class="form-group"><label>📧 Email Address</label><input type="text" id="newMemberEmail" placeholder="e.g. ananya.r@example.in" /></div>
+    <div class="form-group">
+      <label>📞 Contact Number (10 Digits)</label>
+      <div class="phone-input-group">
+        <span class="country-code">+91</span>
+        <input type="text" id="newMemberContact" placeholder="9876543210" maxlength="10" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
+      </div>
+    </div>
+    <div class="btn-group">
+      <button class="btn-primary" style="flex:1;" onclick="saveMemberRecord()">💾 Save Member</button>
+      <button class="btn-outline" onclick="closeMemberModal()">❌ Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- RETURN -->
+<div id="fineModal" class="modal-backdrop">
+  <div class="modal-card">
+    <h3 style="margin-bottom: 12px; color: var(--text-heading);">🔄 Return Book &amp; Tenure Summary</h3>
+    <div class="form-group"><label>📋 Loan Record</label><select id="returnLoanSelect" onchange="updateReturnSummary()"></select></div>
+    <div class="row">
+      <div class="form-group"><label>📅 Issue Date</label><input type="text" id="returnIssueDate" readonly /></div>
+      <div class="form-group"><label>📅 Due Date</label><input type="text" id="returnDueDate" readonly /></div>
+    </div>
+    <div class="form-group"><label>📊 Overdue / Status Summary</label><input type="text" id="overdueSummary" readonly /></div>
+    <div class="form-group"><label>💰 Calculated Fine Amount (₹10/day)</label><input type="text" id="modalFineAmt" readonly style="color:var(--danger); font-weight:700;" /></div>
+    <div class="form-group"><label>💳 Payment / Submission Status</label><select id="payMethod"></select></div>
+    <div class="btn-group">
+      <button class="btn-primary" style="flex:1;" onclick="confirmBookReturn()">✅ Confirm Return &amp; Submit</button>
+      <button class="btn-outline" style="flex:1;" onclick="$('fineModal').style.display='none'">❌ Cancel</button>
+    </div>
+  </div>
+</div>
+
+<aside>
+  <div class="brand-container" data-action="nav" data-view="home" title="Go to Dashboard">
+    <img src="logo.png" alt="LMS Portal" onload="this.nextElementSibling.style.display='none'" onerror="this.remove()" />
+    <span class="brand-text">📚 LMS Portal</span>
+  </div>
+  <nav id="sidebarNav"></nav>
+  <div class="user-profile">
+    <div class="user-info-row">
+      <div class="user-avatar" id="avatarLetter">A</div>
+      <div style="min-width:0;">
+        <div style="font-weight:600;" id="currentRoleName">-</div>
+        <div style="color: #64748b; font-size: 0.72rem; overflow:hidden; text-overflow:ellipsis;" id="currentRoleEmail">-</div>
+      </div>
+    </div>
+    <button class="role-switcher" onclick="confirmLogout()">🔒 Logout / Switch Portal</button>
+  </div>
+</aside>
+
+<main>
+  <header>
+    <div class="header-title"><h2 id="page-title">Library Overview</h2></div>
+    <div class="status-area">
+      <button class="btn-top" onclick="toggleTheme()" id="themeToggleBtn">🌙 Dark Mode</button>
+      <button class="btn-top" onclick="exportData()" id="exportCsvBtn">📥 Export CSV</button>
+      <button class="btn-top" onclick="triggerSplash()">↺ Replay Intro</button>
+      <span class="status-tag" id="connStatusTag">💾 Local Storage DB</span>
+    </div>
+  </header>
+
+  <div class="content">
+    <!-- DASHBOARD -->
+    <section id="view-dashboard" class="view-section active">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="label">Total Collection <span class="stat-icon">📚</span></div><div class="val" id="statBooks">0</div></div>
+        <div class="stat-card"><div class="label">Issued Books <span class="stat-icon">🔄</span></div><div class="val" id="statIssued">0</div></div>
+        <div class="stat-card"><div class="label">Active Members <span class="stat-icon">👥</span></div><div class="val" id="statMembers">0</div></div>
+        <div class="stat-card clickable" onclick="openOverdueModal()" title="Click to view Overdue List">
+          <div class="label">Overdue Alerts <span class="stat-icon">🚨</span></div>
+          <div class="val" style="color: var(--danger);" id="statOverdue">0</div>
+        </div>
+      </div>
+
+      <div class="card" style="background: linear-gradient(135deg, rgba(2, 132, 199, 0.05) 0%, rgba(56, 189, 248, 0.05) 100%); border-left: 4px solid var(--primary);">
+        <div class="card-title"><span>⚡ Usage Analytics</span><span class="badge badge-success">🟢 System Online</span></div>
+        <div class="analytics-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+          <div style="background: var(--card-bg); padding: 12px; border-radius: 6px; border: 1px solid var(--border);">
+            <div style="font-size: 0.75rem; opacity: 0.7; font-weight: 600; text-transform: uppercase;">📊 Peak Issue Day</div>
+            <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-heading); margin-top: 4px;" id="anPeakDay">-</div>
+          </div>
+          <div style="background: var(--card-bg); padding: 12px; border-radius: 6px; border: 1px solid var(--border);">
+            <div style="font-size: 0.75rem; opacity: 0.7; font-weight: 600; text-transform: uppercase;">🔥 Top Demanded Genre</div>
+            <div style="font-size: 1.1rem; font-weight: 700; color: var(--primary); margin-top: 4px;" id="anTopGenre">-</div>
+          </div>
+          <div style="background: var(--card-bg); padding: 12px; border-radius: 6px; border: 1px solid var(--border);">
+            <div style="font-size: 0.75rem; opacity: 0.7; font-weight: 600; text-transform: uppercase;">⭐ Most Issued Book</div>
+            <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-heading); margin-top: 4px;" id="anTopBook">-</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard-layout">
+        <div class="card">
+          <div class="card-title">⚡ Quick Issue / Return</div>
+          <div class="form-group">
+            <label>📚 Book ISBN or Title</label>
+            <div class="input-with-scan">
+              <input type="text" id="issueBookInput" list="bookList" placeholder="e.g. 978-0132350884 or Clean Code" oninput="checkBookStock()" />
+              <button class="btn-scan" onclick="simulateScan('book')" title="Demo scan: picks a random book">📷 Scan</button>
+            </div>
+            <div id="liveStockHint" class="stock-hint" style="display:none;"></div>
+            <datalist id="bookList"></datalist>
+          </div>
+          <div class="form-group">
+            <label>👤 Member ID or Name</label>
+            <div class="input-with-scan">
+              <input type="text" id="issueMemberInput" list="memberList" placeholder="e.g. Rahul Sharma or MEM-101" />
+              <button class="btn-scan" onclick="simulateScan('member')" title="Demo scan: picks a random member">📷 Scan</button>
+            </div>
+            <datalist id="memberList"></datalist>
+          </div>
+          <div class="row">
+            <div class="form-group"><label>📅 Issue Date</label><input type="date" id="issueDateVal" /></div>
+            <div class="form-group"><label>📅 Due Date</label><input type="date" id="dueDateVal" /></div>
+          </div>
+          <div class="btn-group">
+            <button class="btn-primary" style="flex:1;" onclick="processIssue()">🚀 Issue Book</button>
+            <button class="btn-outline" style="flex:1;" onclick="openReturnFromDashboard()">🔄 Return &amp; Submit</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🔍 Quick Catalog Lookup &amp; Hold Queue</div>
+          <div class="form-group"><input type="text" id="catalogSearch" placeholder="🔍 Search book title, author, or genre..." oninput="renderDashCatalog()" /></div>
+          <table>
+            <thead><tr><th>📚 Title</th><th>✍️ Author</th><th>⚙️ Status / Action</th></tr></thead>
+            <tbody id="dashboardCatalogBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📜 Recent Transactions &amp; Audit Trail</div>
+        <table>
+          <thead><tr><th>🏷 Txn ID</th><th>👤 Member</th><th>📚 Book Title</th><th>📊 Status</th><th>📅 Due Date</th><th>💰 Fine</th></tr></thead>
+          <tbody id="auditTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- BOOKS -->
+    <section id="view-books" class="view-section">
+      <div class="card">
+        <div class="card-title"><span>📚 Book Inventory Management</span><button class="btn-primary" onclick="openBookModalForAdd()">+ Add New Book</button></div>
+        <table>
+          <thead><tr><th>🏷 ISBN</th><th>📚 Title</th><th>✍️ Author</th><th>🏷 Genre</th><th>📦 Available / Total</th><th>⚙️ Action</th></tr></thead>
+          <tbody id="bookTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- MEMBERS -->
+    <section id="view-members" class="view-section">
+      <div class="card">
+        <div class="card-title"><span>👥 Registered Members Directory</span><button class="btn-primary" onclick="openMemberModalForAdd()">+ Register Member</button></div>
+        <table>
+          <thead><tr><th>🏷 Member ID</th><th>👤 Full Name</th><th>📧 Email</th><th>📞 Contact</th><th>📚 Books on Loan</th><th>⚙️ Action</th></tr></thead>
+          <tbody id="memberTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TRANSACTIONS -->
+    <section id="view-transactions" class="view-section">
+      <div class="card">
+        <div class="card-title">🔄 Fine &amp; Loan Management Portal</div>
+        <p style="opacity:0.8; margin-bottom: 20px; font-size: 0.9rem;">Review active loans, see automated late fees (₹10/day), and complete return processes.</p>
+        <div class="row">
+          <div class="form-group"><label>📋 Select Loan Record</label><select id="loanSelect" onchange="updateLoanFeeDisplay()"></select></div>
+          <div class="form-group"><label>💰 Automated Late Fee</label><input type="text" id="loanFeeDisplay" readonly /></div>
+        </div>
+        <button class="btn-primary" onclick="openReturnFromLoanSelect()">🔄 Process Return &amp; Collect Fine</button>
+      </div>
+      <div class="card">
+        <div class="card-title">📜 All Transactions</div>
+        <table>
+          <thead><tr><th>🏷 Txn ID</th><th>👤 Member</th><th>📚 Book Title</th><th>📊 Status</th><th>📅 Issued</th><th>📅 Due</th><th>💰 Fine</th></tr></thead>
+          <tbody id="allTxnBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- USER PORTAL -->
+    <section id="view-user-portal" class="view-section">
+      <div class="card" style="background: linear-gradient(135deg, rgba(2, 132, 199, 0.08) 0%, rgba(56, 189, 248, 0.08) 100%);">
+        <div class="card-title">👋 Welcome to Your Member Reading Portal, <span id="userPortalName">Reader</span></div>
+        <p style="font-size: 0.9rem; opacity: 0.85;">Explore the catalog, download e-book sheets, save favourites, or request physical book holds.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">📚 Digital E-Library</div>
+        <div class="form-group"><input type="text" id="userBookSearch" placeholder="🔍 Search e-books by title or author..." oninput="renderUserViews()" /></div>
+        <table>
+          <thead><tr><th>📚 Title</th><th>✍️ Author</th><th>📦 Copies</th><th>📥 Action</th></tr></thead>
+          <tbody id="userCatalogBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="view-user-loans" class="view-section">
+      <div class="card">
+        <div class="card-title">📌 My Loans</div>
+        <table style="margin-bottom: 24px;">
+          <thead><tr><th>📚 Book Title</th><th>📅 Issue Date</th><th>📅 Due Date</th><th>📊 Status</th><th>💰 Fine</th></tr></thead>
+          <tbody id="userLoansBody"></tbody>
+        </table>
+        <div style="background: rgba(56, 189, 248, 0.1); padding: 18px; border-radius: 6px; border: 1px solid var(--border);">
+          <h4 style="font-size: 0.95rem; color: var(--text-heading); margin-bottom: 8px;">💡 Request Physical Book Hold</h4>
+          <p style="font-size: 0.82rem; opacity: 0.8; margin-bottom: 12px;">Reserve a book that is currently out on loan.</p>
+          <div class="input-with-scan">
+            <input type="text" id="holdBookTitleInput" list="bookList" placeholder="Enter book title or ISBN..." />
+            <button class="btn-primary" onclick="submitHoldRequest()">📌 Request Hold</button>
+          </div>
+        </div>
+        <h4 style="font-size: 0.95rem; color: var(--text-heading); margin: 22px 0 10px;">My Holds</h4>
+        <table>
+          <thead><tr><th>📚 Book</th><th>📅 Requested</th><th>⚙️ Action</th></tr></thead>
+          <tbody id="userHoldsBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="view-user-wishlist" class="view-section">
+      <div class="card">
+        <div class="card-title">⭐ My Saved Wishlist Books</div>
+        <table>
+          <thead><tr><th>📚 Title</th><th>✍️ Author</th><th>🏷 Genre</th><th>⚙️ Action</th></tr></thead>
+          <tbody id="userWishlistBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="view-settings" class="view-section">
+      <div class="card" style="max-width: 700px; margin: 0 auto;">
+        <div class="card-title">⚙️ Account Settings &amp; Security Control</div>
+        <h4 style="font-size: 0.95rem; color: var(--text-heading); margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 6px;">👤 Profile Information</h4>
+        <div class="row">
+          <div class="form-group"><label>👤 Full Name / Display Name</label><input type="text" id="settingsName" /></div>
+          <div class="form-group"><label>📧 Email / User ID</label><input type="text" id="settingsEmail" readonly /></div>
+        </div>
+        <div style="margin-bottom: 24px;"><button class="btn-primary" onclick="saveProfileChanges()">💾 Update Profile Info</button></div>
+
+        <h4 style="font-size: 0.95rem; color: var(--text-heading); margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 6px;">🔒 Password Reset &amp; Security</h4>
+        <div class="form-group"><label>🔑 Current Password</label>
+          <div class="password-wrapper"><input type="password" id="currentPassInput" placeholder="Enter current password" autocomplete="current-password" /><button type="button" class="toggle-password" data-action="toggle-pw" data-target="currentPassInput">👁</button></div>
+        </div>
+        <div class="form-group"><label>🔑 New Password</label>
+          <div class="password-wrapper"><input type="password" id="newPassInput" placeholder="Enter new password" autocomplete="new-password" /><button type="button" class="toggle-password" data-action="toggle-pw" data-target="newPassInput">👁</button></div>
+        </div>
+        <div class="form-group"><label>🔑 Confirm New Password</label>
+          <div class="password-wrapper"><input type="password" id="confirmPassInput" placeholder="Confirm new password" autocomplete="new-password" /><button type="button" class="toggle-password" data-action="toggle-pw" data-target="confirmPassInput">👁</button></div>
+        </div>
+        <div style="margin-bottom: 24px;"><button class="btn-primary" onclick="handlePasswordReset()">🔒 Reset Password Securely</button></div>
+
+        <h4 style="font-size: 0.95rem; color: var(--text-heading); margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 6px;">🎨 System Preferences &amp; Theme</h4>
+        <div class="form-group"><label>🎨 Interface Theme Mode</label>
+          <select id="settingsThemeSelect" onchange="applyTheme(this.value)">
+            <option value="light">☀️ Light Mode (Default)</option>
+            <option value="dark">🌙 Dark Mode (Night View)</option>
+          </select>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+'use strict';
+
+/* ================= CONSTANTS & HELPERS ================= */
+const DB_KEY = 'lms_db_v2', SESSION_KEY = 'lms_session', RECENT_KEY = 'lms_recent_users', THEME_KEY = 'lms_theme';
+const FINE_PER_DAY = 10, LOAN_DAYS = 14;
+const $ = id => document.getElementById(id);
+const ls = {
+  get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set: (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },
+  del: k => { try { localStorage.removeItem(k); } catch (e) {} }
+};
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const money = n => '₹' + Number(n).toFixed(2);
+
+const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+const todayISO = () => iso(new Date());
+const addDays = (s, n) => { const d = new Date(s + 'T00:00:00'); d.setDate(d.getDate() + n); return iso(d); };
+const daysBetween = (a, b) => Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000);
+const fmtDate = s => s ? new Date(s + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+const overdueDays = (due, ref) => Math.max(0, daysBetween(due, ref));
+
+let db = null, currentUser = null;
+let editBookIsbn = null, editMemberId = null, detailIsbn = null, pendingReg = null, toastTimer = null;
+
+function toast(msg, ms) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.style.display = 'none'; }, ms || 3500);
+}
+
+/* ================= PASSWORD HASHING ================= */
+function newSalt() {
+  const a = new Uint8Array(12);
+  if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(a);
+  else for (let i = 0; i < a.length; i++) a[i] = Math.floor(Math.random() * 256);
+  return Array.from(a, b => b.toString(16).padStart(2, '0')).join('');
+}
+async function hashPw(pw, salt) {
+  const data = salt + ':' + pw;
+  if (window.crypto && crypto.subtle) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
+    return Array.from(new Uint8Array(buf), b => b.toString(16).padStart(2, '0')).join('');
+  }
+  let h = 5381; // fallback for non-secure contexts (weak, demo only)
+  for (let i = 0; i < data.length; i++) h = ((h << 5) + h + data.charCodeAt(i)) | 0;
+  return 'f' + (h >>> 0).toString(16);
+}
+
+/* ================= DATABASE (localStorage) ================= */
+async function makeUser(id, name, role, pw, memberId) {
+  const salt = newSalt();
+  return { id: id.toLowerCase(), name, role, salt, hash: await hashPw(pw, salt), memberId: memberId || null };
+}
+async function seedDb() {
+  const t = todayISO();
+  return {
+    books: [
+      { isbn: '978-0132350884', title: 'Clean Code', author: 'Robert C. Martin', genre: 'Software Engineering', total: 2 },
+      { isbn: '978-0262033848', title: 'Introduction to Algorithms', author: 'Thomas H. Cormen', genre: 'Computer Science', total: 3 },
+      { isbn: '978-0201633610', title: 'Design Patterns', author: 'Erich Gamma', genre: 'Software Engineering', total: 2 },
+      { isbn: '978-1593279288', title: 'Python Crash Course', author: 'Eric Matthes', genre: 'Programming', total: 2 }
+    ],
+    members: [
+      { id: 'MEM-101', name: 'Rahul Sharma', email: 'rahul.s@example.in', contact: '9876543210' },
+      { id: 'MEM-102', name: 'Amit Kumar', email: 'amit.k@example.in', contact: '9876501234' },
+      { id: 'MEM-103', name: 'Priya Nair', email: 'priya.n@example.in', contact: '9812345678' }
+    ],
+    txns: [
+      { id: 'TX-8819', memberId: 'MEM-102', isbn: '978-0201633610', issueDate: addDays(t, -29), dueDate: addDays(t, -15), returnDate: null, status: 'Issued', fine: 0, payMode: null },
+      { id: 'TX-8820', memberId: 'MEM-103', isbn: '978-0132350884', issueDate: addDays(t, -5), dueDate: addDays(t, 9), returnDate: null, status: 'Issued', fine: 0, payMode: null },
+      { id: 'TX-8821', memberId: 'MEM-101', isbn: '978-0132350884', issueDate: t, dueDate: addDays(t, LOAN_DAYS), returnDate: null, status: 'Issued', fine: 0, payMode: null }
+    ],
+    users: [
+      await makeUser('admin@library.org', 'Super Admin', 'admin', 'Admin@123'),
+      await makeUser('librarian@library.org', 'Assistant Librarian', 'librarian', 'Librarian@123')
+    ],
+    holds: [],
+    wishlist: {},
+    seq: { txn: 8822, member: 104 }
+  };
+}
+function loadDb() {
+  try {
+    const d = JSON.parse(ls.get(DB_KEY));
+    if (d && Array.isArray(d.books) && Array.isArray(d.members) && Array.isArray(d.txns) && Array.isArray(d.users)) {
+      d.holds = d.holds || []; d.wishlist = d.wishlist || {}; d.seq = d.seq || { txn: 9000, member: 500 };
+      return d;
+    }
+  } catch (e) {}
+  return null;
+}
+function saveDb() { if (!ls.set(DB_KEY, JSON.stringify(db))) toast('⚠️ Could not save data (browser storage blocked).'); }
+
+/* ================= DERIVED DATA ================= */
+const activeTxns = () => db.txns.filter(t => t.status !== 'Returned');
+const bookByIsbn = isbn => db.books.find(b => b.isbn === isbn);
+const memberById = id => db.members.find(m => m.id === id);
+const bookTitle = isbn => (bookByIsbn(isbn) || {}).title || isbn;
+const memberName = id => (memberById(id) || {}).name || id;
+function bookStats(b) {
+  const out = activeTxns().filter(t => t.isbn === b.isbn).length;
+  return { out, avail: Math.max(0, b.total - out) };
+}
+const loansOf = memberId => activeTxns().filter(t => t.memberId === memberId).length;
+function statusOf(t) { return t.status === 'Returned' ? 'Returned' : (t.dueDate < todayISO() ? 'Overdue' : 'Issued'); }
+function fineOf(t) { return t.status === 'Returned' ? (t.fine || 0) : overdueDays(t.dueDate, todayISO()) * FINE_PER_DAY; }
+function badge(status) {
+  const cls = status === 'Returned' ? 'badge-success' : status === 'Overdue' ? 'badge-danger' : 'badge-warning';
+  return `<span class="badge ${cls}">${esc(status)}</span>`;
+}
+function findBook(q) {
+  q = String(q || '').trim().toLowerCase();
+  if (!q) return null;
+  return db.books.find(b => b.isbn.toLowerCase() === q) || db.books.find(b => b.title.toLowerCase() === q) || null;
+}
+function findMember(q) {
+  q = String(q || '').trim().toLowerCase();
+  if (!q) return null;
+  return db.members.find(m => m.id.toLowerCase() === q) || db.members.find(m => m.name.toLowerCase() === q) || db.members.find(m => m.email.toLowerCase() === q) || null;
+}
+
+/* ================= AUTH ================= */
+function togglePw(id, btn) {
+  const f = $(id);
+  if (f.type === 'password') { f.type = 'text'; btn.textContent = '🙈'; } else { f.type = 'password'; btn.textContent = '👁'; }
+}
+function renderRecentLogins() {
+  const box = $('recentLoginsContainer');
+  let saved = [];
+  try { saved = JSON.parse(ls.get(RECENT_KEY)) || []; } catch (e) {}
+  if (!saved.length) { box.innerHTML = ''; return; }
+  box.innerHTML = '<span style="font-size:0.75rem; color:#94a3b8; width:100%; margin-bottom:2px;">Recent Accounts:</span>' +
+    saved.map(u => `<span class="recent-chip" data-action="recent-user" data-id="${esc(u)}">👤 ${esc(u)}</span>`).join('');
+}
+function saveRecentLogin(id) {
+  let saved = [];
+  try { saved = JSON.parse(ls.get(RECENT_KEY)) || []; } catch (e) {}
+  saved = [id].concat(saved.filter(x => x !== id)).slice(0, 4);
+  ls.set(RECENT_KEY, JSON.stringify(saved));
+}
+async function handleSecureLogin() {
+  const id = $('authUsername').value.trim().toLowerCase();
+  const pw = $('authPassword').value;
+  if (!id || !pw) { toast('Please enter both User ID and Password!'); return; }
+  const user = db.users.find(u => u.id === id || (u.memberId && u.memberId.toLowerCase() === id));
+  const ok = user && (await hashPw(pw, user.salt)) === user.hash;
+  if (!ok) { toast('❌ Invalid User ID or password.'); return; }
+  saveRecentLogin(user.id);
+  ls.set(SESSION_KEY, user.id);
+  $('authPassword').value = '';
+  $('auth-screen').style.display = 'none';
+  setupRole(user);
+  toast(`Welcome, ${user.name}! Logged in as ${user.role.toUpperCase()}.`);
+}
+function askConfirm(msg, yesLabel) {
+  return new Promise(resolve => {
+    const m = $('confirmModal'), yes = $('confirmYes'), no = $('confirmNo');
+    $('confirmMsg').textContent = msg;
+    yes.textContent = yesLabel || 'Yes';
+    m.style.display = 'flex';
+    const done = v => { m.style.display = 'none'; yes.onclick = null; no.onclick = null; resolve(v); };
+    yes.onclick = () => done(true);
+    no.onclick = () => done(false);
+  });
+}
+async function confirmLogout() {
+  if (await askConfirm('Are you sure you want to logout and switch portal?', '🔒 Logout')) logoutSession();
+}
+function logoutSession() {
+  ls.del(SESSION_KEY);
+  currentUser = null;
+  $('auth-screen').style.display = 'flex';
+  $('authUsername').value = '';
+  $('authPassword').value = '';
+  renderRecentLogins();
+  toast('🔒 Logged out successfully.');
+}
+
+const NAV = {
+  admin: [['dashboard', '📊 Dashboard'], ['books', '📖 Books Catalog'], ['members', '👥 Member Directory'], ['transactions', '🔄 Issue & Return'], ['settings', '⚙️ Settings & Security']],
+  librarian: [['dashboard', '📊 Dashboard'], ['books', '📖 Books Catalog'], ['transactions', '🔄 Issue & Return'], ['settings', '⚙️ Settings & Security']],
+  user: [['user-portal', '📖 E-Books Catalog'], ['user-loans', '📌 My Loans & Hold'], ['user-wishlist', '⭐ Saved Wishlist'], ['settings', '⚙️ Settings & Security']]
+};
+const TITLES = {
+  dashboard: 'Library Overview', books: 'Book Catalog & Inventory', members: 'Member Directory', transactions: 'Issue & Return Portal',
+  'user-portal': 'My Member Reading Portal', 'user-loans': 'My Loans & Hold Queue', 'user-wishlist': 'Saved Wishlist Books', settings: 'Account Settings & Security'
+};
+function setupRole(user) {
+  currentUser = user;
+  $('avatarLetter').textContent = (user.name || user.id).charAt(0).toUpperCase();
+  $('currentRoleName').textContent = user.name;
+  $('currentRoleEmail').textContent = user.id;
+  $('settingsName').value = user.name;
+  $('settingsEmail').value = user.id;
+  $('exportCsvBtn').style.display = user.role === 'admin' ? '' : 'none';
+  $('userPortalName').textContent = user.name;
+  $('sidebarNav').innerHTML = NAV[user.role].map(([v, label]) => `<a data-action="nav" data-view="${v}">${esc(label)}</a>`).join('');
+  setDefaultDates();
+  switchView(NAV[user.role][0][0]);
+}
+function switchView(view) {
+  if (!currentUser) return;
+  const allowed = NAV[currentUser.role].map(x => x[0]);
+  if (view === 'home' || !allowed.includes(view)) view = allowed[0];
+  document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+  const target = $('view-' + view);
+  if (target) target.classList.add('active');
+  document.querySelectorAll('#sidebarNav a').forEach(a => a.classList.toggle('active', a.dataset.view === view));
+  $('page-title').textContent = TITLES[view] || 'Library Portal';
+  renderAll();
+}
+
+/* ================= REGISTRATION ================= */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_RE = /^[6-9]\d{9}$/;
+function openPublicRegisterModal() { $('publicRegisterModal').style.display = 'flex'; }
+function closePublicRegisterModal() { $('publicRegisterModal').style.display = 'none'; }
+function initiateRegistrationVerification() {
+  const name = $('pubRegName').value.trim(), email = $('pubRegEmail').value.trim().toLowerCase();
+  const contact = $('pubRegContact').value.trim(), pass = $('pubRegPass').value, confirm2 = $('pubRegConfirmPass').value;
+  if (!name || !email || !contact || !pass || !confirm2) { toast('Please fill out all fields!'); return; }
+  if (!EMAIL_RE.test(email)) { toast('❌ Enter a valid email address.'); return; }
+  if (!PHONE_RE.test(contact)) { toast('❌ Enter a valid 10-digit Indian mobile number.'); return; }
+  if (pass.length < 6) { toast('❌ Password must be at least 6 characters.'); return; }
+  if (pass !== confirm2) { toast('❌ Passwords do not match!'); return; }
+  if (db.users.some(u => u.id === email) || db.members.some(m => m.email.toLowerCase() === email)) { toast('❌ This email is already registered.'); return; }
+  const otp = String(Math.floor(100000 + Math.random() * 900000));
+  pendingReg = { name, email, contact, pass, otp };
+  closePublicRegisterModal();
+  const info = $('verifyEmailInfo');
+  info.textContent = '';
+  info.append('We have sent a 6-digit verification code to ');
+  const b = document.createElement('b'); b.textContent = email; info.append(b, '.');
+  info.append(document.createElement('br'), document.createElement('br'));
+  const sim = document.createElement('span');
+  sim.style.cssText = 'color:#38bdf8; background:#0f172a; padding:4px 8px; border-radius:4px;';
+  sim.textContent = '🧪 Simulation OTP Code: ' + otp;
+  info.append(sim);
+  $('verificationCodeInput').value = '';
+  $('emailVerifyModal').style.display = 'flex';
+  toast('📩 Verification code sent (simulated).');
+}
+async function verifyCodeAndComplete() {
+  if (!pendingReg) return;
+  if ($('verificationCodeInput').value.trim() !== pendingReg.otp) { toast('❌ Invalid verification code!'); return; }
+  const r = pendingReg;
+  const memberId = 'MEM-' + (db.seq.member++);
+  db.members.push({ id: memberId, name: r.name, email: r.email, contact: r.contact });
+  db.users.push(await makeUser(r.email, r.name, 'user', r.pass, memberId));
+  saveDb();
+  pendingReg = null;
+  $('emailVerifyModal').style.display = 'none';
+  ['pubRegName', 'pubRegEmail', 'pubRegContact', 'pubRegPass', 'pubRegConfirmPass'].forEach(i => { $(i).value = ''; });
+  $('authUsername').value = r.email;
+  $('authPassword').focus();
+  toast(`✅ Email verified! Your Member ID is ${memberId}. You can now log in with your email or Member ID.`, 9000);
+}
+
+/* ================= RENDERING ================= */
+function renderAll() {
+  if (!db) return;
+  renderStats(); renderAnalytics(); renderDashCatalog(); renderAudit(); renderBooks(); renderMembers();
+  renderLoanSelect(); renderOverdue(); renderAllTxns(); renderLists(); renderUserViews();
+}
+function renderStats() {
+  const today = todayISO();
+  $('statBooks').textContent = db.books.reduce((s, b) => s + b.total, 0).toLocaleString();
+  $('statIssued').textContent = activeTxns().length.toLocaleString();
+  $('statMembers').textContent = db.members.length.toLocaleString();
+  $('statOverdue').textContent = activeTxns().filter(t => t.dueDate < today).length.toLocaleString();
+}
+function topOf(counter) {
+  let best = null;
+  for (const k in counter) if (!best || counter[k] > counter[best]) best = k;
+  return best ? `${best} (${counter[best]})` : '-';
+}
+function renderAnalytics() {
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const dayC = {}, genreC = {}, bookC = {};
+  db.txns.forEach(t => {
+    const d = days[new Date(t.issueDate + 'T00:00:00').getDay()];
+    dayC[d] = (dayC[d] || 0) + 1;
+    const b = bookByIsbn(t.isbn);
+    if (b) { genreC[b.genre] = (genreC[b.genre] || 0) + 1; bookC[b.title] = (bookC[b.title] || 0) + 1; }
+  });
+  $('anPeakDay').textContent = topOf(dayC);
+  $('anTopGenre').textContent = topOf(genreC);
+  $('anTopBook').textContent = topOf(bookC);
+}
+function renderDashCatalog() {
+  const q = $('catalogSearch').value.toLowerCase().trim();
+  const rows = db.books.filter(b => !q || [b.title, b.author, b.genre, b.isbn].join(' ').toLowerCase().includes(q)).map(b => {
+    const s = bookStats(b);
+    const status = s.avail > 0
+      ? '<span class="badge badge-success">Available</span>'
+      : `<span class="badge badge-warning">Issued</span> <button class="btn-top" style="padding:2px 6px; margin-left:4px;" data-action="reserve" data-isbn="${esc(b.isbn)}">📌 Reserve</button>`;
+    return `<tr class="clickable-row" data-action="book-detail" data-isbn="${esc(b.isbn)}"><td>${esc(b.title)}</td><td>${esc(b.author)}</td><td>${status}</td></tr>`;
+  }).join('');
+  $('dashboardCatalogBody').innerHTML = rows || '<tr><td colspan="3" class="empty">No books found</td></tr>';
+}
+function fineCell(t) {
+  const f = fineOf(t);
+  if (t.status === 'Returned' && t.payMode === 'Waived Off' && f > 0) return `${money(f)} (waived)`;
+  return money(f);
+}
+function renderAudit() {
+  const rows = db.txns.slice(-10).reverse().map(t =>
+    `<tr><td>${esc(t.id)}</td><td>${esc(memberName(t.memberId))}</td><td>${esc(bookTitle(t.isbn))}</td><td>${badge(statusOf(t))}</td><td>${esc(fmtDate(t.dueDate))}</td><td>${esc(fineCell(t))}</td></tr>`).join('');
+  $('auditTableBody').innerHTML = rows || '<tr><td colspan="6" class="empty">No transactions yet</td></tr>';
+}
+function renderAllTxns() {
+  const rows = db.txns.slice().reverse().map(t =>
+    `<tr><td>${esc(t.id)}</td><td>${esc(memberName(t.memberId))}</td><td>${esc(bookTitle(t.isbn))}</td><td>${badge(statusOf(t))}</td><td>${esc(fmtDate(t.issueDate))}</td><td>${esc(fmtDate(t.dueDate))}</td><td>${esc(fineCell(t))}</td></tr>`).join('');
+  $('allTxnBody').innerHTML = rows || '<tr><td colspan="7" class="empty">No transactions yet</td></tr>';
+}
+function renderBooks() {
+  const rows = db.books.map(b => {
+    const s = bookStats(b);
+    return `<tr class="clickable-row" data-action="book-detail" data-isbn="${esc(b.isbn)}"><td>${esc(b.isbn)}</td><td>${esc(b.title)}</td><td>${esc(b.author)}</td><td>${esc(b.genre)}</td><td>${s.avail} / ${b.total}</td>
+      <td><button class="btn-outline" style="padding:4px 8px; margin-right:4px;" data-action="edit-book" data-isbn="${esc(b.isbn)}">Edit</button><button class="btn-danger-action" data-action="delete-book" data-isbn="${esc(b.isbn)}">Delete</button></td></tr>`;
+  }).join('');
+  $('bookTableBody').innerHTML = rows || '<tr><td colspan="6" class="empty">No books in inventory</td></tr>';
+}
+function renderMembers() {
+  const rows = db.members.map(m =>
+    `<tr><td>${esc(m.id)}</td><td>${esc(m.name)}</td><td>${esc(m.email)}</td><td>+91 ${esc(m.contact)}</td><td>${loansOf(m.id)}</td>
+      <td><button class="btn-outline" style="padding:4px 8px; margin-right:4px;" data-action="edit-member" data-id="${esc(m.id)}">Edit</button><button class="btn-danger-action" data-action="delete-member" data-id="${esc(m.id)}">Delete</button></td></tr>`).join('');
+  $('memberTableBody').innerHTML = rows || '<tr><td colspan="6" class="empty">No members registered</td></tr>';
+}
+function renderLists() {
+  $('bookList').innerHTML = db.books.map(b => `<option value="${esc(b.title)}"></option>`).join('');
+  $('memberList').innerHTML = db.members.map(m => `<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('');
+}
+function loanLabel(t) { return `${t.id} | ${memberName(t.memberId)} - ${bookTitle(t.isbn)} (${statusOf(t)})`; }
+function renderLoanSelect() {
+  const sel = $('loanSelect'), prev = sel.value, active = activeTxns();
+  sel.innerHTML = active.length ? active.map(t => `<option value="${esc(t.id)}">${esc(loanLabel(t))}</option>`).join('') : '<option value="">No active loans</option>';
+  if (active.some(t => t.id === prev)) sel.value = prev;
+  updateLoanFeeDisplay();
+}
+function updateLoanFeeDisplay() {
+  const t = db.txns.find(x => x.id === $('loanSelect').value);
+  $('loanFeeDisplay').value = t ? money(fineOf(t)) : '-';
+}
+function renderOverdue() {
+  const today = todayISO();
+  const rows = activeTxns().filter(t => t.dueDate < today).map(t => {
+    const b = bookByIsbn(t.isbn) || {};
+    const d = overdueDays(t.dueDate, today);
+    return `<tr><td>${esc(memberName(t.memberId))}</td><td>${esc(b.title || t.isbn)}</td><td>${esc(b.author || '-')}</td><td><span class="badge badge-danger">${d} Days</span></td><td>${money(d * FINE_PER_DAY)}</td>
+      <td><button class="btn-primary btn-sm" data-action="overdue-return" data-txn="${esc(t.id)}">🔄 Process Return</button></td></tr>`;
+  }).join('');
+  $('overdueTableBody').innerHTML = rows || '<tr><td colspan="6" class="empty">🎉 No overdue books right now</td></tr>';
+}
+function renderUserViews() {
+  if (!currentUser || currentUser.role !== 'user') return;
+  const wish = db.wishlist[currentUser.id] || [];
+  const q = $('userBookSearch').value.toLowerCase().trim();
+  const cat = db.books.filter(b => !q || (b.title + ' ' + b.author).toLowerCase().includes(q)).map(b => {
+    const s = bookStats(b), starred = wish.includes(b.isbn);
+    return `<tr><td>${esc(b.title)}</td><td>${esc(b.author)}</td><td>${s.avail > 0 ? `<span class="badge badge-success">${s.avail} available</span>` : '<span class="badge badge-warning">All on loan</span>'}</td>
+      <td><button class="btn-primary btn-sm" data-action="download-pdf" data-isbn="${esc(b.isbn)}">📥 PDF</button> <button class="btn-top" data-action="wishlist" data-isbn="${esc(b.isbn)}">${starred ? '⭐ Saved' : '☆ Save'}</button></td></tr>`;
+  }).join('');
+  $('userCatalogBody').innerHTML = cat || '<tr><td colspan="4" class="empty">No books found</td></tr>';
+
+  const mine = db.txns.filter(t => t.memberId === currentUser.memberId).slice().reverse();
+  $('userLoansBody').innerHTML = mine.map(t =>
+    `<tr><td>${esc(bookTitle(t.isbn))}</td><td>${esc(fmtDate(t.issueDate))}</td><td>${esc(fmtDate(t.dueDate))}</td><td>${badge(statusOf(t))}</td><td>${esc(fineCell(t))}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">You have no loans yet</td></tr>';
+
+  const holds = db.holds.filter(h => h.memberId === currentUser.memberId);
+  $('userHoldsBody').innerHTML = holds.map(h =>
+    `<tr><td>${esc(bookTitle(h.isbn))}</td><td>${esc(fmtDate(h.date))}</td><td><button class="btn-danger-action" data-action="cancel-hold" data-id="${esc(h.id)}">Cancel</button></td></tr>`).join('') || '<tr><td colspan="3" class="empty">No active holds</td></tr>';
+
+  const wl = wish.map(bookByIsbn).filter(Boolean);
+  $('userWishlistBody').innerHTML = wl.map(b =>
+    `<tr><td>${esc(b.title)}</td><td>${esc(b.author)}</td><td>${esc(b.genre)}</td><td><button class="btn-primary btn-sm" data-action="download-pdf" data-isbn="${esc(b.isbn)}">📥 PDF</button> <button class="btn-danger-action" data-action="wishlist" data-isbn="${esc(b.isbn)}">Remove</button></td></tr>`).join('') || '<tr><td colspan="4" class="empty">Your wishlist is empty. Save books from the E-Books Catalog.</td></tr>';
+}
+
+/* ================= BOOKS ================= */
+function openBookModalForAdd() {
+  editBookIsbn = null;
+  $('bookModalTitle').textContent = '📖 Add New Book to Inventory';
+  ['newBookIsbn', 'newBookTitle', 'newBookAuthor', 'newBookGenre'].forEach(i => { $(i).value = ''; });
+  $('newBookIsbn').readOnly = false;
+  $('newBookCopies').value = '1';
+  $('bookModal').style.display = 'flex';
+}
+function openBookModalForEdit(isbn) {
+  const b = bookByIsbn(isbn); if (!b) return;
+  editBookIsbn = isbn;
+  $('bookModalTitle').textContent = '✏️ Edit Book Record';
+  $('newBookIsbn').value = b.isbn; $('newBookIsbn').readOnly = true;
+  $('newBookTitle').value = b.title; $('newBookAuthor').value = b.author; $('newBookGenre').value = b.genre;
+  $('newBookCopies').value = b.total;
+  $('bookModal').style.display = 'flex';
+}
+function closeBookModal() { $('bookModal').style.display = 'none'; editBookIsbn = null; }
+function saveBookRecord() {
+  const isbn = $('newBookIsbn').value.trim(), title = $('newBookTitle').value.trim();
+  const author = $('newBookAuthor').value.trim(), genre = $('newBookGenre').value.trim();
+  const total = parseInt($('newBookCopies').value, 10);
+  if (!isbn || !title || !author || !genre) { toast('Please fill out all book details!'); return; }
+  if (!/^[0-9Xx-]{10,17}$/.test(isbn)) { toast('❌ ISBN should be 10–13 digits (hyphens allowed).'); return; }
+  if (!Number.isInteger(total) || total < 1) { toast('❌ Total copies must be at least 1.'); return; }
+  if (editBookIsbn) {
+    const b = bookByIsbn(editBookIsbn), out = bookStats(b).out;
+    if (total < out) { toast(`❌ ${out} copies are currently on loan; total can't be lower.`); return; }
+    Object.assign(b, { title, author, genre, total });
+    toast('Book record updated successfully!');
+  } else {
+    if (db.books.some(b => b.isbn.toLowerCase() === isbn.toLowerCase())) { toast('❌ A book with this ISBN already exists.'); return; }
+    db.books.push({ isbn, title, author, genre, total });
+    toast(`Book "${title}" added to inventory!`);
+  }
+  saveDb(); closeBookModal(); renderAll();
+}
+async function deleteBook(isbn) {
+  const b = bookByIsbn(isbn); if (!b) return;
+  if (bookStats(b).out > 0) { toast('❌ Cannot delete: copies of this book are currently on loan.'); return; }
+  if (!(await askConfirm(`Delete "${b.title}" from inventory?`, 'Delete'))) return;
+  db.books = db.books.filter(x => x.isbn !== isbn);
+  db.holds = db.holds.filter(h => h.isbn !== isbn);
+  saveDb(); renderAll(); toast('Book record deleted.');
+}
+function showBookDetails(isbn) {
+  const b = bookByIsbn(isbn); if (!b) return;
+  detailIsbn = isbn;
+  const s = bookStats(b);
+  $('detIsbn').textContent = b.isbn; $('detTitle').textContent = b.title; $('detAuthor').textContent = b.author; $('detGenre').textContent = b.genre;
+  $('detCopies').textContent = `${s.avail} / ${b.total} copies available`;
+  $('bookDetailModal').style.display = 'flex';
+}
+
+/* ================= MEMBERS ================= */
+function openMemberModalForAdd() {
+  editMemberId = null;
+  $('memberModalTitle').textContent = '👤 Register New Member';
+  ['newMemberName', 'newMemberEmail', 'newMemberContact'].forEach(i => { $(i).value = ''; });
+  $('memberModal').style.display = 'flex';
+}
+function openMemberModalForEdit(id) {
+  const m = memberById(id); if (!m) return;
+  editMemberId = id;
+  $('memberModalTitle').textContent = '✏️ Edit Member Record';
+  $('newMemberName').value = m.name; $('newMemberEmail').value = m.email; $('newMemberContact').value = m.contact;
+  $('memberModal').style.display = 'flex';
+}
+function closeMemberModal() { $('memberModal').style.display = 'none'; editMemberId = null; }
+function saveMemberRecord() {
+  const name = $('newMemberName').value.trim(), email = $('newMemberEmail').value.trim().toLowerCase(), contact = $('newMemberContact').value.trim();
+  if (!name || !email || !contact) { toast('Please fill out all member details!'); return; }
+  if (!EMAIL_RE.test(email)) { toast('❌ Enter a valid email address.'); return; }
+  if (!PHONE_RE.test(contact)) { toast('❌ Enter a valid 10-digit Indian mobile number.'); return; }
+  if (db.members.some(m => m.email.toLowerCase() === email && m.id !== editMemberId)) { toast('❌ Email already used by another member.'); return; }
+  if (editMemberId) {
+    Object.assign(memberById(editMemberId), { name, email, contact });
+    const u = db.users.find(x => x.memberId === editMemberId); if (u) u.name = name;
+    toast('Member record updated successfully!');
+  } else {
+    db.members.push({ id: 'MEM-' + (db.seq.member++), name, email, contact });
+    toast(`Member "${name}" registered successfully!`);
+  }
+  saveDb(); closeMemberModal(); renderAll();
+}
+async function deleteMember(id) {
+  const m = memberById(id); if (!m) return;
+  if (loansOf(id) > 0) { toast('❌ Cannot delete: member still has books on loan.'); return; }
+  if (!(await askConfirm(`Delete member "${m.name}"?`, 'Delete'))) return;
+  db.members = db.members.filter(x => x.id !== id);
+  db.users = db.users.filter(u => u.memberId !== id);
+  db.holds = db.holds.filter(h => h.memberId !== id);
+  saveDb(); renderAll(); toast('Member record removed.');
+}
+
+/* ================= ISSUE / RETURN ================= */
+function setDefaultDates() {
+  const t = todayISO();
+  $('issueDateVal').value = t;
+  $('dueDateVal').value = addDays(t, LOAN_DAYS);
+}
+function checkBookStock() {
+  const hint = $('liveStockHint'), v = $('issueBookInput').value.trim();
+  if (!v) { hint.style.display = 'none'; return; }
+  const b = findBook(v);
+  hint.style.display = 'inline-block';
+  hint.textContent = b ? `📦 ${bookStats(b).avail} of ${b.total} copies available` : '❓ No exact match yet';
+}
+function simulateScan(type) {
+  if (type === 'book') {
+    if (!db.books.length) return;
+    const b = db.books[Math.floor(Math.random() * db.books.length)];
+    $('issueBookInput').value = b.isbn; checkBookStock(); toast('📷 Barcode scanned: ' + b.title);
+  } else {
+    if (!db.members.length) return;
+    const m = db.members[Math.floor(Math.random() * db.members.length)];
+    $('issueMemberInput').value = m.id; toast('📷 Member ID scanned: ' + m.name);
+  }
+}
+function processIssue() {
+  const bookQ = $('issueBookInput').value.trim(), memQ = $('issueMemberInput').value.trim();
+  const issue = $('issueDateVal').value, due = $('dueDateVal').value;
+  if (!bookQ || !memQ) { toast('Please enter both Book title/ISBN and Member name/ID!'); return; }
+  const book = findBook(bookQ), member = findMember(memQ);
+  if (!book) { toast('❌ Book not found in catalog.'); return; }
+  if (!member) { toast('❌ Member not found.'); return; }
+  if (!issue || !due || due < issue) { toast('❌ Due date must be on or after the issue date.'); return; }
+  if (bookStats(book).avail < 1) { toast(`❌ No copies of "${book.title}" available. Try Reserve.`); return; }
+  if (activeTxns().some(t => t.memberId === member.id && t.isbn === book.isbn)) { toast('❌ This member already has this book.'); return; }
+  const id = 'TX-' + (db.seq.txn++);
+  db.txns.push({ id, memberId: member.id, isbn: book.isbn, issueDate: issue, dueDate: due, returnDate: null, status: 'Issued', fine: 0, payMode: null });
+  saveDb();
+  $('issueBookInput').value = ''; $('issueMemberInput').value = ''; $('liveStockHint').style.display = 'none';
+  setDefaultDates(); renderAll();
+  toast(`✅ ${id}: "${book.title}" issued to ${member.name}!`);
+}
+function reserveBook(isbn) {
+  const b = bookByIsbn(isbn); if (!b) return;
+  const m = currentUser.role === 'user' ? memberById(currentUser.memberId) : findMember($('issueMemberInput').value);
+  if (!m) { toast('Enter a valid Member ID in the Quick Issue form first.'); return; }
+  if (db.holds.some(h => h.memberId === m.id && h.isbn === isbn)) { toast('A hold already exists for this member and book.'); return; }
+  db.holds.push({ id: 'H-' + Date.now(), memberId: m.id, isbn, date: todayISO() });
+  saveDb(); renderAll();
+  toast(`📌 Hold placed for "${b.title}" (${m.name}).`);
+}
+function openReturnModal(txnId) {
+  const active = activeTxns();
+  if (!active.length) { toast('No active loans to return.'); return; }
+  const sel = $('returnLoanSelect');
+  sel.innerHTML = active.map(t => `<option value="${esc(t.id)}">${esc(loanLabel(t))}</option>`).join('');
+  sel.value = active.some(t => t.id === txnId) ? txnId : active[0].id;
+  updateReturnSummary();
+  $('fineModal').style.display = 'flex';
+}
+function openReturnFromDashboard() {
+  const book = findBook($('issueBookInput').value), member = findMember($('issueMemberInput').value);
+  const match = activeTxns().find(t => (!book || t.isbn === book.isbn) && (!member || t.memberId === member.id) && (book || member));
+  openReturnModal(match ? match.id : null);
+}
+function openReturnFromLoanSelect() { openReturnModal($('loanSelect').value); }
+function updateReturnSummary() {
+  const t = db.txns.find(x => x.id === $('returnLoanSelect').value); if (!t) return;
+  const d = overdueDays(t.dueDate, todayISO()), fine = d * FINE_PER_DAY;
+  $('returnIssueDate').value = fmtDate(t.issueDate);
+  $('returnDueDate').value = fmtDate(t.dueDate);
+  $('overdueSummary').value = d > 0 ? `Overdue by ${d} Day${d > 1 ? 's' : ''}` : 'On-Time Return (No Overdue)';
+  $('modalFineAmt').value = money(fine);
+  $('payMethod').innerHTML = fine > 0
+    ? '<option value="Cash">💵 Overdue Fine - Paid via Cash</option><option value="UPI">📱 Overdue Fine - Paid via UPI</option><option value="Waived Off">🎁 Fine Waived Off</option>'
+    : '<option value="On-Time">✅ On-Time Submission (No Fine)</option>';
+}
+function confirmBookReturn() {
+  const t = db.txns.find(x => x.id === $('returnLoanSelect').value);
+  if (!t || t.status === 'Returned') { toast('Loan record not found.'); return; }
+  t.status = 'Returned';
+  t.returnDate = todayISO();
+  t.fine = overdueDays(t.dueDate, t.returnDate) * FINE_PER_DAY;
+  t.payMode = $('payMethod').value;
+  saveDb();
+  $('fineModal').style.display = 'none';
+  renderAll();
+  toast(`✅ ${t.id} returned and recorded in audit trail!`);
+}
+function openOverdueModal() { renderOverdue(); $('overdueModal').style.display = 'flex'; }
+
+/* ================= USER PORTAL ================= */
+function submitHoldRequest() {
+  const q = $('holdBookTitleInput').value.trim();
+  if (!q) { toast('Please enter a book title to request a hold!'); return; }
+  const b = findBook(q);
+  if (!b) { toast('❌ Book not found. Pick a title from the suggestions.'); return; }
+  if (bookStats(b).avail > 0) { toast('This book is available right now. Visit the desk to borrow it!'); return; }
+  reserveBook(b.isbn);
+  $('holdBookTitleInput').value = '';
+}
+function toggleWishlist(isbn) {
+  const list = db.wishlist[currentUser.id] || (db.wishlist[currentUser.id] = []);
+  const i = list.indexOf(isbn);
+  if (i >= 0) { list.splice(i, 1); toast('Removed from wishlist.'); } else { list.push(isbn); toast('⭐ Saved to wishlist!'); }
+  saveDb(); renderUserViews();
+}
+
+/* ================= PDF (valid single-page PDF) ================= */
+function buildPdf(title, author) {
+  const a = s => String(s).replace(/[^\x20-\x7E]/g, '?').replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+  const lines = [
+    [20, 'LMS Portal - E-Library', 760], [16, title, 720], [12, 'Author: ' + author, 695],
+    [10, 'Downloaded: ' + new Date().toLocaleDateString('en-GB'), 675],
+    [10, 'Placeholder e-book sheet generated by the LMS Portal demo.', 640]
+  ];
+  const content = lines.map(([sz, tx, y]) => `BT /F1 ${sz} Tf 72 ${y} Td (${a(tx)}) Tj ET`).join('\n');
+  const objs = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 5 0 R /Resources << /Font << /F1 4 0 R >> >> >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    `<< /Length ${content.length} >>\nstream\n${content}\nendstream`
+  ];
+  let pdf = '%PDF-1.4\n';
+  const offs = [];
+  objs.forEach((o, i) => { offs.push(pdf.length); pdf += `${i + 1} 0 obj\n${o}\nendobj\n`; });
+  const xref = pdf.length;
+  pdf += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n` + offs.map(o => String(o).padStart(10, '0') + ' 00000 n \n').join('');
+  pdf += `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  return new Blob([pdf], { type: 'application/pdf' });
+}
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function downloadBookPDF(isbn) {
+  const b = bookByIsbn(isbn); if (!b) return;
+  downloadBlob(buildPdf(b.title, b.author), b.title.replace(/[^\w]+/g, '_') + '_LMS_Ebook.pdf');
+  toast(`📥 E-Book PDF downloaded for "${b.title}"!`);
+}
+
+/* ================= EXPORT CSV ================= */
+function csvCell(v) {
+  let s = String(v == null ? '' : v);
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; // neutralise spreadsheet formulas
+  return '"' + s.replace(/"/g, '""') + '"';
+}
+function exportData() {
+  if (!currentUser || currentUser.role !== 'admin') { toast('Only admins can export data.'); return; }
+  const head = ['Txn ID', 'Member ID', 'Member', 'ISBN', 'Book Title', 'Status', 'Issue Date', 'Due Date', 'Return Date', 'Fine (INR)', 'Payment Mode'];
+  const rows = db.txns.map(t => [t.id, t.memberId, memberName(t.memberId), t.isbn, bookTitle(t.isbn), statusOf(t), t.issueDate, t.dueDate, t.returnDate || '', fineOf(t).toFixed(2), t.payMode || '']);
+  const csv = '\uFEFF' + [head].concat(rows).map(r => r.map(csvCell).join(',')).join('\r\n');
+  downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), 'LMS_Audit_Trail_' + todayISO() + '.csv');
+  toast('📥 Audit trail exported as CSV!');
+}
+
+/* ================= SETTINGS ================= */
+function saveProfileChanges() {
+  const name = $('settingsName').value.trim();
+  if (!name) { toast('Name cannot be empty!'); return; }
+  const u = db.users.find(x => x.id === currentUser.id);
+  u.name = name; currentUser = u;
+  if (u.memberId && memberById(u.memberId)) memberById(u.memberId).name = name;
+  saveDb();
+  $('currentRoleName').textContent = name;
+  $('avatarLetter').textContent = name.charAt(0).toUpperCase();
+  $('userPortalName').textContent = name;
+  renderAll();
+  toast('✅ Profile information updated successfully!');
+}
+async function handlePasswordReset() {
+  const cur = $('currentPassInput').value, np = $('newPassInput').value, cp = $('confirmPassInput').value;
+  if (!cur || !np || !cp) { toast('Please fill out all password fields!'); return; }
+  const u = db.users.find(x => x.id === currentUser.id);
+  if ((await hashPw(cur, u.salt)) !== u.hash) { toast('❌ Current password is incorrect.'); return; }
+  if (np !== cp) { toast('❌ New passwords do not match!'); return; }
+  if (np.length < 6) { toast('❌ Password must be at least 6 characters long!'); return; }
+  u.salt = newSalt(); u.hash = await hashPw(np, u.salt);
+  saveDb();
+  ['currentPassInput', 'newPassInput', 'confirmPassInput'].forEach(i => { $(i).value = ''; });
+  toast('🔒 Password updated successfully!');
+}
+function applyTheme(theme) {
+  document.body.setAttribute('data-theme', theme);
+  $('themeToggleBtn').textContent = theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+  $('settingsThemeSelect').value = theme;
+  ls.set(THEME_KEY, theme);
+}
+function toggleTheme() { applyTheme(document.body.getAttribute('data-theme') === 'light' ? 'dark' : 'light'); }
+
+/* ================= SPLASH ================= */
+function triggerSplash() {
+  const splash = $('splash-screen'), video = $('splashVideo');
+  splash.style.display = 'flex';
+  splash.classList.remove('fade-out');
+  let done = false;
+  const finish = () => {
+    if (done) return; done = true;
+    splash.classList.add('fade-out');
+    setTimeout(() => { splash.style.display = 'none'; }, 600);
+  };
+  video.onended = finish; video.onerror = finish;
+  const src = video.querySelector('source'); if (src) src.onerror = finish; // video file missing
+  try { video.currentTime = 0; const p = video.play(); if (p && p.catch) p.catch(finish); } catch (e) { finish(); }
+  setTimeout(finish, 4500);
+}
+
+/* ================= EVENT DELEGATION ================= */
+const ACTIONS = {
+  'nav': el => switchView(el.dataset.view),
+  'toggle-pw': el => togglePw(el.dataset.target, el),
+  'recent-user': el => { $('authUsername').value = el.dataset.id; $('authPassword').focus(); },
+  'book-detail': el => showBookDetails(el.dataset.isbn),
+  'edit-book': el => openBookModalForEdit(el.dataset.isbn),
+  'delete-book': el => deleteBook(el.dataset.isbn),
+  'edit-member': el => openMemberModalForEdit(el.dataset.id),
+  'delete-member': el => deleteMember(el.dataset.id),
+  'reserve': el => reserveBook(el.dataset.isbn),
+  'overdue-return': el => { $('overdueModal').style.display = 'none'; openReturnModal(el.dataset.txn); },
+  'download-pdf': el => downloadBookPDF(el.dataset.isbn),
+  'wishlist': el => toggleWishlist(el.dataset.isbn),
+  'cancel-hold': el => { db.holds = db.holds.filter(h => h.id !== el.dataset.id); saveDb(); renderAll(); toast('Hold cancelled.'); }
+};
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-action]');
+  if (el && ACTIONS[el.dataset.action]) ACTIONS[el.dataset.action](el);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.target.id === 'authUsername' || e.target.id === 'authPassword')) handleSecureLogin();
+});
+
+/* ================= BOOT ================= */
+window.addEventListener('DOMContentLoaded', async () => {
+  applyTheme(ls.get(THEME_KEY) === 'dark' ? 'dark' : 'light');
+  db = loadDb();
+  if (!db) { db = await seedDb(); saveDb(); }
+  renderRecentLogins();
+  setDefaultDates();
+  const sid = ls.get(SESSION_KEY);
+  const user = sid && db.users.find(u => u.id === sid);
+  if (user) { $('auth-screen').style.display = 'none'; setupRole(user); }
+  triggerSplash();
+});
+</script>
+</body>
+</html>
