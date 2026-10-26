@@ -243,11 +243,22 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
     <div class="form-group"><label><b>📦 Stock Status:</b></label><div id="detCopies" style="color: var(--primary); font-weight: 600;"></div></div>
     <div class="form-group" style="margin-top: 10px; background: rgba(56,189,248,0.08); padding: 10px; border-radius: 6px;">
       <label style="color: var(--primary); font-weight:600;">📥 Digital E-Book Sheet</label>
-      <button class="btn-primary" style="margin-top: 6px; width: 100%; font-size: 0.8rem;" onclick="downloadBookPDF(detailIsbn)">📥 Download E-Book as PDF</button>
+      <button class="btn-primary" style="margin-top: 6px; width: 100%; font-size: 0.8rem;" id="detPdfBtn" onclick="downloadBookPDF(detailIsbn)">📥 Download E-Book PDF</button><div id="detNoPdf" style="font-size:.8rem; opacity:.7; margin-top:6px; display:none;">No PDF uploaded yet.</div>
     </div>
     <div class="btn-group" style="margin-top: 20px;">
       <button class="btn-primary" style="flex:1;" onclick="$('bookDetailModal').style.display='none'">❌ Close Details</button>
     </div>
+  </div>
+</div>
+
+<!-- PDF VIEWER -->
+<div id="pdfViewerModal" class="modal-backdrop">
+  <div class="modal-card modal-wide" style="max-width: 900px; height: 85vh;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 10px;">
+      <h3 id="pdfViewerTitle" style="color: var(--text-heading);"></h3>
+      <button class="btn-outline" style="padding: 4px 10px;" onclick="closePdfViewer()">✕ Close</button>
+    </div>
+    <iframe id="pdfFrame" title="E-book viewer" style="flex: 1; width: 100%; border: 1px solid var(--border); border-radius: 6px; background: #fff;"></iframe>
   </div>
 </div>
 
@@ -277,6 +288,7 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
     <div class="form-group"><label>✍️ Author Name</label><input type="text" id="newBookAuthor" placeholder="e.g. James Clear" /></div>
     <div class="form-group"><label>🏷 Genre</label><input type="text" id="newBookGenre" placeholder="e.g. Self-Help" /></div>
     <div class="form-group"><label>📚 Total Copies <span style="opacity:.7">(available copies are calculated from active loans)</span></label><input type="number" id="newBookCopies" value="1" min="1" /></div>
+    <div class="form-group"><label>📄 E-Book PDF <span style="opacity:.7">(optional, max 15 MB)</span></label><input type="file" id="newBookPdf" accept="application/pdf,.pdf" /><div id="newBookPdfNote" style="font-size:.75rem; opacity:.7; margin-top:4px;"></div></div>
     <div class="btn-group">
       <button class="btn-primary" style="flex:1;" onclick="saveBookRecord()">💾 Save Book</button>
       <button class="btn-outline" onclick="closeBookModal()">❌ Cancel</button>
@@ -907,7 +919,7 @@ function renderBooks() {
   const q = $('bookSearch').value.toLowerCase().trim();
   const rows = db.books.filter(b => !q || [b.title, b.author, b.genre, b.isbn].join(' ').toLowerCase().includes(q)).map(b => {
     const s = bookStats(b);
-    return `<tr class="clickable-row" data-action="book-detail" data-isbn="${esc(b.isbn)}"><td>${esc(b.isbn)}</td><td>${esc(b.title)}</td><td>${esc(b.author)}</td><td>${esc(b.genre)}</td><td>${s.avail} / ${b.total}</td>
+    return `<tr class="clickable-row" data-action="book-detail" data-isbn="${esc(b.isbn)}"><td>${esc(b.isbn)}</td><td>${esc(b.title)}${b.hasPdf ? ' 📄' : ''}</td><td>${esc(b.author)}</td><td>${esc(b.genre)}</td><td>${s.avail} / ${b.total}</td>
       <td><button class="btn-outline" style="padding:4px 8px; margin-right:4px;" data-action="edit-book" data-isbn="${esc(b.isbn)}">Edit</button><button class="btn-danger-action" data-action="delete-book" data-isbn="${esc(b.isbn)}">Delete</button></td></tr>`;
   }).join('');
   $('bookTableBody').innerHTML = rows || '<tr><td colspan="6" class="empty">No books in inventory</td></tr>';
@@ -951,7 +963,7 @@ function renderUserViews() {
   const cat = db.books.filter(b => !q || (b.title + ' ' + b.author).toLowerCase().includes(q)).map(b => {
     const s = bookStats(b), starred = wish.includes(b.isbn);
     return `<tr><td>${esc(b.title)}</td><td>${esc(b.author)}</td><td>${s.avail > 0 ? `<span class="badge badge-success">${s.avail} available</span>` : '<span class="badge badge-warning">All on loan</span>'}</td>
-      <td><button class="btn-primary btn-sm" data-action="download-pdf" data-isbn="${esc(b.isbn)}">📥 PDF</button> <button class="btn-top" data-action="wishlist" data-isbn="${esc(b.isbn)}">${starred ? '⭐ Saved' : '☆ Save'}</button></td></tr>`;
+      <td>${pdfButtons(b)} <button class="btn-top" data-action="wishlist" data-isbn="${esc(b.isbn)}">${starred ? '⭐ Saved' : '☆ Save'}</button></td></tr>`;
   }).join('');
   $('userCatalogBody').innerHTML = cat || '<tr><td colspan="4" class="empty">No books found</td></tr>';
 
@@ -965,7 +977,7 @@ function renderUserViews() {
 
   const wl = wish.map(bookByIsbn).filter(Boolean);
   $('userWishlistBody').innerHTML = wl.map(b =>
-    `<tr><td>${esc(b.title)}</td><td>${esc(b.author)}</td><td>${esc(b.genre)}</td><td><button class="btn-primary btn-sm" data-action="download-pdf" data-isbn="${esc(b.isbn)}">📥 PDF</button> <button class="btn-danger-action" data-action="wishlist" data-isbn="${esc(b.isbn)}">Remove</button></td></tr>`).join('') || '<tr><td colspan="4" class="empty">Your wishlist is empty. Save books from the E-Books Catalog.</td></tr>';
+    `<tr><td>${esc(b.title)}</td><td>${esc(b.author)}</td><td>${esc(b.genre)}</td><td>${pdfButtons(b)} <button class="btn-danger-action" data-action="wishlist" data-isbn="${esc(b.isbn)}">Remove</button></td></tr>`).join('') || '<tr><td colspan="4" class="empty">Your wishlist is empty. Save books from the E-Books Catalog.</td></tr>';
 }
 
 /* ================= BOOKS ================= */
@@ -975,6 +987,7 @@ function openBookModalForAdd() {
   ['newBookIsbn', 'newBookTitle', 'newBookAuthor', 'newBookGenre'].forEach(i => { $(i).value = ''; });
   $('newBookIsbn').readOnly = false;
   $('newBookCopies').value = '1';
+  $('newBookPdf').value = ''; $('newBookPdfNote').textContent = '';
   $('bookModal').style.display = 'flex';
 }
 function openBookModalForEdit(isbn) {
@@ -984,16 +997,26 @@ function openBookModalForEdit(isbn) {
   $('newBookIsbn').value = b.isbn; $('newBookIsbn').readOnly = true;
   $('newBookTitle').value = b.title; $('newBookAuthor').value = b.author; $('newBookGenre').value = b.genre;
   $('newBookCopies').value = b.total;
+  $('newBookPdf').value = '';
+  $('newBookPdfNote').textContent = b.hasPdf ? `Current PDF: ${b.pdfName || 'uploaded'} (choose a file to replace it)` : 'No PDF uploaded yet.';
   $('bookModal').style.display = 'flex';
 }
 function closeBookModal() { $('bookModal').style.display = 'none'; editBookIsbn = null; }
-function saveBookRecord() {
+async function validPdf(f) {
+  if (f.size > 15 * 1024 * 1024) { toast('❌ PDF is larger than 15 MB.'); return false; }
+  const head = await f.slice(0, 5).text();
+  if (!/\.pdf$/i.test(f.name) || head !== '%PDF-') { toast('❌ That file is not a valid PDF.'); return false; }
+  return true;
+}
+async function saveBookRecord() {
   const isbn = $('newBookIsbn').value.trim(), title = $('newBookTitle').value.trim();
   const author = $('newBookAuthor').value.trim(), genre = $('newBookGenre').value.trim();
   const total = parseInt($('newBookCopies').value, 10);
   if (!isbn || !title || !author || !genre) { toast('Please fill out all book details!'); return; }
   if (!/^[0-9Xx-]{10,17}$/.test(isbn)) { toast('❌ ISBN should be 10–13 digits (hyphens allowed).'); return; }
   if (!Number.isInteger(total) || total < 1) { toast('❌ Total copies must be at least 1.'); return; }
+  const pdf = ($('newBookPdf').files || [])[0] || null;
+  if (pdf && !(await validPdf(pdf))) return;
   if (editBookIsbn) {
     const b = bookByIsbn(editBookIsbn), out = bookStats(b).out;
     if (total < out) { toast(`❌ ${out} copies are currently on loan; total can't be lower.`); return; }
@@ -1004,6 +1027,10 @@ function saveBookRecord() {
     db.books.push({ isbn, title, author, genre, total });
     toast(`Book "${title}" added to inventory!`);
   }
+  if (pdf) {
+    try { await pdfStore.put(isbn, pdf); const bk = bookByIsbn(isbn); bk.hasPdf = true; bk.pdfName = pdf.name; }
+    catch (e) { toast('⚠️ Book saved, but the PDF could not be stored in this browser.'); }
+  }
   saveDb(); closeBookModal(); renderAll();
 }
 async function deleteBook(isbn) {
@@ -1011,6 +1038,7 @@ async function deleteBook(isbn) {
   if (bookStats(b).out > 0) { toast('❌ Cannot delete: copies of this book are currently on loan.'); return; }
   if (!(await askConfirm(`Delete "${b.title}" from inventory?`, 'Delete'))) return;
   db.books = db.books.filter(x => x.isbn !== isbn);
+  pdfStore.del(isbn).catch(() => {});
   db.holds = db.holds.filter(h => h.isbn !== isbn);
   saveDb(); renderAll(); toast('Book record deleted.');
 }
@@ -1020,6 +1048,8 @@ function showBookDetails(isbn) {
   const s = bookStats(b);
   $('detIsbn').textContent = b.isbn; $('detTitle').textContent = b.title; $('detAuthor').textContent = b.author; $('detGenre').textContent = b.genre;
   $('detCopies').textContent = `${s.avail} / ${b.total} copies available`;
+  $('detPdfBtn').style.display = b.hasPdf ? '' : 'none';
+  $('detNoPdf').style.display = b.hasPdf ? 'none' : 'block';
   $('bookDetailModal').style.display = 'flex';
 }
 
@@ -1202,10 +1232,54 @@ function downloadBlob(blob, filename) {
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-function downloadBookPDF(isbn) {
+/* Uploaded PDFs live in IndexedDB (per browser), keyed by ISBN */
+const pdfStore = {
+  open() {
+    return new Promise((res, rej) => {
+      const r = indexedDB.open('lms_pdfs', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('pdfs');
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    });
+  },
+  async run(mode, fn) {
+    const d = await this.open();
+    return new Promise((res, rej) => {
+      const t = d.transaction('pdfs', mode), req = fn(t.objectStore('pdfs'));
+      t.oncomplete = () => res(req.result); t.onerror = () => rej(t.error);
+    });
+  },
+  put(k, blob) { return this.run('readwrite', s => s.put(blob, k)); },
+  get(k) { return this.run('readonly', s => s.get(k)); },
+  del(k) { return this.run('readwrite', s => s.delete(k)); }
+};
+async function getBookPdf(b) {
+  try { const f = await pdfStore.get(b.isbn); if (f) return f; } catch (e) {}
+  toast('❌ PDF not found in this browser. Ask the librarian to upload it again.');
+  return null;
+}
+const pdfButtons = b => b.hasPdf
+  ? `<button class="btn-primary btn-sm" data-action="read-pdf" data-isbn="${esc(b.isbn)}">📖 Read</button> <button class="btn-top" data-action="download-pdf" data-isbn="${esc(b.isbn)}">📥 Download</button>`
+  : '<span class="badge badge-warning">No PDF yet</span>';
+async function downloadBookPDF(isbn) {
   const b = bookByIsbn(isbn); if (!b) return;
-  downloadBlob(buildPdf(b.title, b.author), b.title.replace(/[^\w]+/g, '_') + '_LMS_Ebook.pdf');
-  toast(`📥 E-Book PDF downloaded for "${b.title}"!`);
+  const blob = await getBookPdf(b); if (!blob) return;
+  downloadBlob(blob, b.pdfName || (b.title.replace(/[^\w]+/g, '_') + '.pdf'));
+  toast(`📥 Downloaded "${b.title}"`);
+}
+let pdfViewUrl = null;
+async function readBookPdf(isbn) {
+  const b = bookByIsbn(isbn); if (!b) return;
+  const blob = await getBookPdf(b); if (!blob) return;
+  if (pdfViewUrl) URL.revokeObjectURL(pdfViewUrl);
+  pdfViewUrl = URL.createObjectURL(blob);
+  $('pdfViewerTitle').textContent = '📖 ' + b.title;
+  $('pdfFrame').src = pdfViewUrl;
+  $('pdfViewerModal').style.display = 'flex';
+}
+function closePdfViewer() {
+  $('pdfViewerModal').style.display = 'none';
+  $('pdfFrame').src = 'about:blank';
+  if (pdfViewUrl) { URL.revokeObjectURL(pdfViewUrl); pdfViewUrl = null; }
 }
 
 /* ================= EXPORT CSV ================= */
@@ -1287,6 +1361,7 @@ const ACTIONS = {
   'reserve': el => reserveBook(el.dataset.isbn),
   'overdue-return': el => { $('overdueModal').style.display = 'none'; openReturnModal(el.dataset.txn); },
   'download-pdf': el => downloadBookPDF(el.dataset.isbn),
+  'read-pdf': el => readBookPdf(el.dataset.isbn),
   'wishlist': el => toggleWishlist(el.dataset.isbn),
   'cancel-hold': el => { db.holds = db.holds.filter(h => h.id !== el.dataset.id); saveDb(); renderAll(); toast('Hold cancelled.'); }
 };
