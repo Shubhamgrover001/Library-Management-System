@@ -251,6 +251,21 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
   </div>
 </div>
 
+<!-- CHECKOUT (demo) -->
+<div id="checkoutModal" class="modal-backdrop" style="z-index: 9999980;">
+  <div class="modal-card">
+    <h3 style="color: var(--text-heading); margin-bottom: 10px;">🛒 Checkout</h3>
+    <p id="coDesc" style="font-size: 0.9rem; margin-bottom: 14px;"></p>
+    <div class="form-group"><label>💰 Amount</label><input type="text" id="coAmount" readonly style="font-weight:700;" /></div>
+    <div class="form-group"><label>💳 Payment Method</label><select id="coMethod"><option>UPI</option><option>Card</option><option>Net Banking</option></select></div>
+    <p style="font-size: 0.75rem; opacity: 0.7;">🧪 Demo checkout: no real payment is taken.</p>
+    <div class="btn-group">
+      <button class="btn-primary" style="flex:1;" onclick="confirmCheckout()">✅ Pay Now</button>
+      <button class="btn-outline" onclick="closeCheckout()">❌ Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- PDF VIEWER -->
 <div id="pdfViewerModal" class="modal-backdrop">
   <div class="modal-card modal-wide" style="max-width: 900px; height: 85vh;">
@@ -258,6 +273,7 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
       <h3 id="pdfViewerTitle" style="color: var(--text-heading);"></h3>
       <button class="btn-outline" style="padding: 4px 10px;" onclick="closePdfViewer()">✕ Close</button>
     </div>
+    <div style="font-size: 0.85rem; margin-bottom: 8px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;"><span id="pdfNoteText"></span><button class="btn-primary btn-sm" id="pdfBuyBtn" data-action="buy-book" style="display:none;">🛒 Buy full book</button></div>
     <iframe id="pdfFrame" title="E-book viewer" style="flex: 1; width: 100%; border: 1px solid var(--border); border-radius: 6px; background: #fff;"></iframe>
   </div>
 </div>
@@ -288,7 +304,8 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
     <div class="form-group"><label>✍️ Author Name</label><input type="text" id="newBookAuthor" placeholder="e.g. James Clear" /></div>
     <div class="form-group"><label>🏷 Genre</label><input type="text" id="newBookGenre" placeholder="e.g. Self-Help" /></div>
     <div class="form-group"><label>📚 Total Copies <span style="opacity:.7">(available copies are calculated from active loans)</span></label><input type="number" id="newBookCopies" value="1" min="1" /></div>
-    <div class="form-group"><label>📄 E-Book PDF <span style="opacity:.7">(optional, max 15 MB)</span></label><input type="file" id="newBookPdf" accept="application/pdf,.pdf" /><div id="newBookPdfNote" style="font-size:.75rem; opacity:.7; margin-top:4px;"></div></div>
+    <div class="form-group"><label>💰 Price (₹) <span style="opacity:.7">(readers pay this to own the full book)</span></label><input type="number" id="newBookPrice" value="199" min="0" step="1" /></div>
+    <div class="form-group"><label>📄 E-Book PDF <span style="opacity:.7">(optional, max 12 MB)</span></label><input type="file" id="newBookPdf" accept="application/pdf,.pdf" /><div id="newBookPdfNote" style="font-size:.75rem; opacity:.7; margin-top:4px;"></div></div>
     <div class="btn-group">
       <button class="btn-primary" style="flex:1;" onclick="saveBookRecord()">💾 Save Book</button>
       <button class="btn-outline" onclick="closeBookModal()">❌ Cancel</button>
@@ -449,7 +466,7 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
       <div class="card">
         <div class="card-title"><span>📚 Book Inventory Management</span><input type="text" id="bookSearch" placeholder="🔍 Search title, author, genre, ISBN..." oninput="renderBooks()" style="max-width:280px;" /><button class="btn-primary" onclick="openBookModalForAdd()">+ Add New Book</button></div>
         <table>
-          <thead><tr><th>🏷 ISBN</th><th>📚 Title</th><th>✍️ Author</th><th>🏷 Genre</th><th>📦 Available / Total</th><th>⚙️ Action</th></tr></thead>
+          <thead><tr><th>🏷 ISBN</th><th>📚 Title</th><th>✍️ Author</th><th>🏷 Genre</th><th>📦 Available / Total</th><th>💰 Price</th><th>⚙️ Action</th></tr></thead>
           <tbody id="bookTableBody"></tbody>
         </table>
       </div>
@@ -506,14 +523,33 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
     <section id="view-user-portal" class="view-section">
       <div class="card" style="background: linear-gradient(135deg, rgba(2, 132, 199, 0.08) 0%, rgba(56, 189, 248, 0.08) 100%);">
         <div class="card-title">👋 Welcome to Your Member Reading Portal, <span id="userPortalName">Reader</span></div>
-        <p style="font-size: 0.9rem; opacity: 0.85;">Explore the catalog, download e-book sheets, save favourites, or request physical book holds.</p>
+        <p style="font-size: 0.9rem; opacity: 0.85;">Preview the first 7 pages of any book for free. Subscribe or buy a book to read it fully and download it.</p>
       </div>
+      <div class="card" id="subCard"></div>
       <div class="card">
         <div class="card-title">📚 Digital E-Library</div>
         <div class="form-group"><input type="text" id="userBookSearch" placeholder="🔍 Search e-books by title or author..." oninput="renderUserViews()" /></div>
         <table>
           <thead><tr><th>📚 Title</th><th>✍️ Author</th><th>📦 Copies</th><th>📥 Action</th></tr></thead>
           <tbody id="userCatalogBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="view-user-library" class="view-section">
+      <div class="card">
+        <div class="card-title"><span>📚 My Personal Library</span><span id="libSummary" class="badge badge-success"></span></div>
+        <p style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 14px;">Books you buy stay here forever. Books you add during a subscription stay readable while it is active.</p>
+        <table>
+          <thead><tr><th>📚 Title</th><th>✍️ Author</th><th>🔑 Access</th><th>📅 Added</th><th>⚙️ Action</th></tr></thead>
+          <tbody id="userLibraryBody"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">🧾 My Payments</div>
+        <table>
+          <thead><tr><th>🏷 ID</th><th>📅 Date</th><th>🛒 Item</th><th>💳 Method</th><th>💰 Amount</th></tr></thead>
+          <tbody id="userPaymentsBody"></tbody>
         </table>
       </div>
     </section>
@@ -666,7 +702,7 @@ async function seedDb() {
       await makeUser('librarian@library.org', 'Assistant Librarian', 'librarian', 'Librarian@123')
     ],
     holds: [],
-    wishlist: {},
+    wishlist: {}, library: {}, payments: [],
     seq: { txn: 8822, member: 104 }
   };
 }
@@ -674,7 +710,7 @@ function loadDb() {
   try {
     const d = JSON.parse(ls.get(DB_KEY));
     if (d && Array.isArray(d.books) && Array.isArray(d.members) && Array.isArray(d.txns) && Array.isArray(d.users)) {
-      d.holds = d.holds || []; d.wishlist = d.wishlist || {}; d.seq = d.seq || { txn: 9000, member: 500 };
+      d.holds = d.holds || []; d.wishlist = d.wishlist || {}; d.library = d.library || {}; d.payments = d.payments || []; d.seq = d.seq || { txn: 9000, member: 500 };
       return d;
     }
   } catch (e) {}
@@ -770,11 +806,11 @@ function logoutSession() {
 const NAV = {
   admin: [['dashboard', '📊 Dashboard'], ['books', '📖 Books Catalog'], ['members', '👥 Member Directory'], ['transactions', '🔄 Issue & Return'], ['fines', '💰 Fines & Payments'],['settings', '⚙️ Settings & Security']],
   librarian: [['dashboard', '📊 Dashboard'], ['books', '📖 Books Catalog'], ['transactions', '🔄 Issue & Return'], ['fines', '💰 Fines & Payments'],['settings', '⚙️ Settings & Security']],
-  user: [['user-portal', '📖 E-Books Catalog'], ['user-loans', '📌 My Loans & Hold'], ['user-wishlist', '⭐ Saved Wishlist'], ['settings', '⚙️ Settings & Security']]
+  user: [['user-portal', '📖 E-Books Catalog'], ['user-library', '📚 My Library'], ['user-loans', '📌 My Loans & Hold'],['user-wishlist', '⭐ Saved Wishlist'], ['settings', '⚙️ Settings & Security']]
 };
 const TITLES = {
   dashboard: 'Library Overview', books: 'Book Catalog & Inventory', members: 'Member Directory', transactions: 'Issue & Return Portal', fines: 'Fines & Payments',
-  'user-portal': 'My Member Reading Portal', 'user-loans': 'My Loans & Hold Queue', 'user-wishlist': 'Saved Wishlist Books', settings: 'Account Settings & Security'
+  'user-portal': 'My Member Reading Portal', 'user-loans': 'My Loans & Hold Queue', 'user-library': 'My Personal Library', 'user-wishlist': 'Saved Wishlist Books', settings: 'Account Settings & Security'
 };
 function setupRole(user) {
   currentUser = user;
@@ -919,10 +955,10 @@ function renderBooks() {
   const q = $('bookSearch').value.toLowerCase().trim();
   const rows = db.books.filter(b => !q || [b.title, b.author, b.genre, b.isbn].join(' ').toLowerCase().includes(q)).map(b => {
     const s = bookStats(b);
-    return `<tr class="clickable-row" data-action="book-detail" data-isbn="${esc(b.isbn)}"><td>${esc(b.isbn)}</td><td>${esc(b.title)}${b.hasPdf ? ' 📄' : ''}</td><td>${esc(b.author)}</td><td>${esc(b.genre)}</td><td>${s.avail} / ${b.total}</td>
+    return `<tr class="clickable-row" data-action="book-detail" data-isbn="${esc(b.isbn)}"><td>${esc(b.isbn)}</td><td>${esc(b.title)}${b.hasPdf ? ' 📄' : ''}</td><td>${esc(b.author)}</td><td>${esc(b.genre)}</td><td>${s.avail} / ${b.total}</td><td>₹${priceOf(b)}</td>
       <td><button class="btn-outline" style="padding:4px 8px; margin-right:4px;" data-action="edit-book" data-isbn="${esc(b.isbn)}">Edit</button><button class="btn-danger-action" data-action="delete-book" data-isbn="${esc(b.isbn)}">Delete</button></td></tr>`;
   }).join('');
-  $('bookTableBody').innerHTML = rows || '<tr><td colspan="6" class="empty">No books in inventory</td></tr>';
+  $('bookTableBody').innerHTML = rows || '<tr><td colspan="7" class="empty">No books in inventory</td></tr>';
 }
 function renderMembers() {
   const q = $('memberSearch').value.toLowerCase().trim();
@@ -956,14 +992,36 @@ function renderOverdue() {
   }).join('');
   $('overdueTableBody').innerHTML = rows || '<tr><td colspan="6" class="empty">🎉 No overdue books right now</td></tr>';
 }
+function renderReaderStore() {
+  const u = currentUser, active = subActive(u);
+  $('subCard').innerHTML = `<div class="card-title"><span>💎 Subscription</span><span class="badge ${active ? 'badge-success' : 'badge-warning'}">${active ? 'Active until ' + esc(fmtDate(u.sub.expires)) : 'Free preview mode'}</span></div>
+    <p style="font-size:0.88rem; opacity:0.85; margin-bottom:12px;">${active ? 'You can read and download every book that has a PDF.' : `Without a plan you can preview the first ${PREVIEW_PAGES} pages of any book. Subscribe to read and download everything, or buy single books.`}</p>
+    <div class="btn-group" style="margin-top:0;">${Object.keys(PLANS).map(k => `<button class="btn-primary" data-action="subscribe" data-plan="${k}">${active ? 'Renew' : 'Subscribe'} ${esc(PLANS[k].label)} · ${money0(PLANS[k].price)}</button>`).join('')}</div>`;
+  const lib = (db.library[u.id] || []).filter(e => bookByIsbn(e.isbn));
+  const own = lib.filter(e => e.source === 'purchase').length;
+  $('libSummary').textContent = `${own} owned · ${lib.length - own} via subscription`;
+  $('userLibraryBody').innerHTML = lib.map(e => {
+    const b = bookByIsbn(e.isbn), owned = e.source === 'purchase', ok = owned || active;
+    const access = owned ? '<span class="badge badge-success">Owned</span>' : ok ? '<span class="badge badge-warning">Subscription</span>' : '<span class="badge badge-danger">Subscription expired</span>';
+    const acts = ok ? pdfButtons(b) : `<button class="btn-primary btn-sm" data-action="buy-book" data-isbn="${esc(b.isbn)}">🛒 Buy ${money0(priceOf(b))}</button>`;
+    return `<tr><td>${esc(b.title)}</td><td>${esc(b.author)}</td><td>${access}</td><td>${esc(fmtDate(e.date))}</td><td>${acts}${owned ? '' : ` <button class="btn-danger-action" data-action="remove-library" data-isbn="${esc(b.isbn)}">Remove</button>`}</td></tr>`;
+  }).join('') || '<tr><td colspan="5" class="empty">Your library is empty. Buy a book, or add books while subscribed.</td></tr>';
+  $('userPaymentsBody').innerHTML = db.payments.filter(p => p.userId === u.id).slice().reverse().map(p =>
+    `<tr><td>${esc(p.id)}</td><td>${esc(fmtDate(p.date))}</td><td>${esc(p.label)}</td><td>${esc(p.method)}</td><td>${money(p.amount)}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">No payments yet</td></tr>';
+}
+function libBtn(b) {
+  return !libEntry(currentUser.id, b.isbn) && subActive(currentUser) && b.hasPdf
+    ? `<button class="btn-top" data-action="add-library" data-isbn="${esc(b.isbn)}">➕ Library</button>` : '';
+}
 function renderUserViews() {
   if (!currentUser || currentUser.role !== 'user') return;
+  renderReaderStore();
   const wish = db.wishlist[currentUser.id] || [];
   const q = $('userBookSearch').value.toLowerCase().trim();
   const cat = db.books.filter(b => !q || (b.title + ' ' + b.author).toLowerCase().includes(q)).map(b => {
     const s = bookStats(b), starred = wish.includes(b.isbn);
     return `<tr><td>${esc(b.title)}</td><td>${esc(b.author)}</td><td>${s.avail > 0 ? `<span class="badge badge-success">${s.avail} available</span>` : '<span class="badge badge-warning">All on loan</span>'}</td>
-      <td>${pdfButtons(b)} <button class="btn-top" data-action="wishlist" data-isbn="${esc(b.isbn)}">${starred ? '⭐ Saved' : '☆ Save'}</button></td></tr>`;
+      <td>${pdfButtons(b)} ${libBtn(b)} <button class="btn-top" data-action="wishlist" data-isbn="${esc(b.isbn)}">${starred ? '⭐ Saved' : '☆ Save'}</button></td></tr>`;
   }).join('');
   $('userCatalogBody').innerHTML = cat || '<tr><td colspan="4" class="empty">No books found</td></tr>';
 
@@ -987,7 +1045,7 @@ function openBookModalForAdd() {
   ['newBookIsbn', 'newBookTitle', 'newBookAuthor', 'newBookGenre'].forEach(i => { $(i).value = ''; });
   $('newBookIsbn').readOnly = false;
   $('newBookCopies').value = '1';
-  $('newBookPdf').value = ''; $('newBookPdfNote').textContent = '';
+  $('newBookPdf').value = ''; $('newBookPdfNote').textContent = ''; $('newBookPrice').value = '199';
   $('bookModal').style.display = 'flex';
 }
 function openBookModalForEdit(isbn) {
@@ -997,13 +1055,14 @@ function openBookModalForEdit(isbn) {
   $('newBookIsbn').value = b.isbn; $('newBookIsbn').readOnly = true;
   $('newBookTitle').value = b.title; $('newBookAuthor').value = b.author; $('newBookGenre').value = b.genre;
   $('newBookCopies').value = b.total;
+  $('newBookPrice').value = priceOf(b);
   $('newBookPdf').value = '';
   $('newBookPdfNote').textContent = b.hasPdf ? `Current PDF: ${b.pdfName || 'uploaded'} (choose a file to replace it)` : 'No PDF uploaded yet.';
   $('bookModal').style.display = 'flex';
 }
 function closeBookModal() { $('bookModal').style.display = 'none'; editBookIsbn = null; }
 async function validPdf(f) {
-  if (f.size > 15 * 1024 * 1024) { toast('❌ PDF is larger than 15 MB.'); return false; }
+  if (f.size > 12 * 1024 * 1024) { toast('❌ PDF is larger than 12 MB. Please compress it and try again.'); return false; }
   const head = await f.slice(0, 5).text();
   if (!/\.pdf$/i.test(f.name) || head !== '%PDF-') { toast('❌ That file is not a valid PDF.'); return false; }
   return true;
@@ -1015,16 +1074,18 @@ async function saveBookRecord() {
   if (!isbn || !title || !author || !genre) { toast('Please fill out all book details!'); return; }
   if (!/^[0-9Xx-]{10,17}$/.test(isbn)) { toast('❌ ISBN should be 10–13 digits (hyphens allowed).'); return; }
   if (!Number.isInteger(total) || total < 1) { toast('❌ Total copies must be at least 1.'); return; }
+  const price = parseFloat($('newBookPrice').value);
+  if (!Number.isFinite(price) || price < 0) { toast('❌ Enter a valid price (0 or more).'); return; }
   const pdf = ($('newBookPdf').files || [])[0] || null;
   if (pdf && !(await validPdf(pdf))) return;
   if (editBookIsbn) {
     const b = bookByIsbn(editBookIsbn), out = bookStats(b).out;
     if (total < out) { toast(`❌ ${out} copies are currently on loan; total can't be lower.`); return; }
-    Object.assign(b, { title, author, genre, total });
+    Object.assign(b, { title, author, genre, total, price });
     toast('Book record updated successfully!');
   } else {
     if (db.books.some(b => b.isbn.toLowerCase() === isbn.toLowerCase())) { toast('❌ A book with this ISBN already exists.'); return; }
-    db.books.push({ isbn, title, author, genre, total });
+    db.books.push({ isbn, title, author, genre, total, price });
     toast(`Book "${title}" added to inventory!`);
   }
   if (pdf) {
@@ -1257,11 +1318,97 @@ async function getBookPdf(b) {
   toast('❌ PDF not found in this browser. Ask the librarian to upload it again.');
   return null;
 }
-const pdfButtons = b => b.hasPdf
-  ? `<button class="btn-primary btn-sm" data-action="read-pdf" data-isbn="${esc(b.isbn)}">📖 Read</button> <button class="btn-top" data-action="download-pdf" data-isbn="${esc(b.isbn)}">📥 Download</button>`
-  : '<span class="badge badge-warning">No PDF yet</span>';
+/* ---- Access rules: free preview vs full (subscription or purchase) ---- */
+const PREVIEW_PAGES = 7;
+const PLANS = { monthly: { label: 'Monthly', days: 30, price: 149 }, yearly: { label: 'Yearly', days: 365, price: 1199 } };
+const priceOf = b => (Number.isFinite(b.price) ? b.price : 199);
+const money0 = n => '₹' + Number(n).toLocaleString('en-IN');
+const subActive = u => !!(u && u.sub && u.sub.expires >= todayISO());
+const libEntry = (uid, isbn) => (db.library[uid] || []).find(e => e.isbn === isbn);
+function accessOf(b) {
+  if (!currentUser || currentUser.role !== 'user') return 'full'; // staff
+  const e = libEntry(currentUser.id, b.isbn);
+  return (e && e.source === 'purchase') || subActive(currentUser) ? 'full' : 'preview';
+}
+function pdfButtons(b) {
+  if (!b.hasPdf) return '<span class="badge badge-warning">No PDF yet</span>';
+  const i = esc(b.isbn);
+  if (accessOf(b) === 'full') return `<button class="btn-primary btn-sm" data-action="read-pdf" data-isbn="${i}">📖 Read</button> <button class="btn-top" data-action="download-pdf" data-isbn="${i}">📥 Download</button>`;
+  return `<button class="btn-top" data-action="read-pdf" data-isbn="${i}">👁 Preview ${PREVIEW_PAGES}p</button> <button class="btn-primary btn-sm" data-action="buy-book" data-isbn="${i}">🛒 Buy ${money0(priceOf(b))}</button>`;
+}
+function loadPdfLib() {
+  if (window.PDFLib) return Promise.resolve();
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
+    s.onload = res; s.onerror = () => rej(new Error('pdf-lib failed to load'));
+    document.head.appendChild(s);
+  });
+}
+async function makePreviewBlob(blob) { // builds a NEW pdf holding only the first pages
+  await loadPdfLib();
+  const src = await PDFLib.PDFDocument.load(await blob.arrayBuffer(), { ignoreEncryption: true });
+  const total = src.getPageCount(), n = Math.min(PREVIEW_PAGES, total);
+  const out = await PDFLib.PDFDocument.create();
+  (await out.copyPages(src, Array.from({ length: n }, (_, i) => i))).forEach(p => out.addPage(p));
+  return { blob: new Blob([await out.save()], { type: 'application/pdf' }), n, total };
+}
+
+/* ---- Demo checkout: subscription or single-book purchase ---- */
+let checkoutCtx = null;
+function openCheckout(ctx) {
+  let desc, amount;
+  if (ctx.type === 'subscription') {
+    const p = PLANS[ctx.plan]; if (!p) return;
+    desc = `${p.label} subscription (${p.days} days): read and download every book`; amount = p.price;
+  } else {
+    const b = bookByIsbn(ctx.isbn); if (!b) return;
+    const e = libEntry(currentUser.id, b.isbn);
+    if (e && e.source === 'purchase') { toast('You already own this book.'); return; }
+    desc = `Buy "${b.title}": yours to read and download forever`; amount = priceOf(b);
+  }
+  checkoutCtx = Object.assign({}, ctx, { amount });
+  $('coDesc').textContent = desc;
+  $('coAmount').value = money(amount);
+  $('checkoutModal').style.display = 'flex';
+}
+function closeCheckout() { $('checkoutModal').style.display = 'none'; checkoutCtx = null; }
+function confirmCheckout() {
+  const c = checkoutCtx, u = currentUser;
+  if (!c || !u) return;
+  db.seq.pay = (db.seq.pay || 1000) + 1;
+  const pay = { id: 'PAY-' + db.seq.pay, userId: u.id, type: c.type, amount: c.amount, method: $('coMethod').value || 'UPI', date: todayISO(), label: '' };
+  let msg;
+  if (c.type === 'subscription') {
+    const p = PLANS[c.plan], base = subActive(u) ? u.sub.expires : todayISO();
+    u.sub = { plan: c.plan, expires: addDays(base, p.days) };
+    pay.label = `${p.label} subscription`;
+    msg = 'Subscription active until ' + fmtDate(u.sub.expires);
+  } else {
+    const b = bookByIsbn(c.isbn), lib = db.library[u.id] || (db.library[u.id] = []), e = libEntry(u.id, b.isbn);
+    if (e) { e.source = 'purchase'; } else lib.push({ isbn: b.isbn, source: 'purchase', date: todayISO() });
+    pay.label = 'Book: ' + b.title; pay.isbn = b.isbn;
+    msg = 'Book added to My Library';
+  }
+  db.payments.push(pay);
+  saveDb(); closeCheckout(); renderAll();
+  toast(`✅ Payment of ${money(pay.amount)} successful (demo). ${msg}`, 5000);
+}
+function addToLibrary(isbn) {
+  if (!subActive(currentUser)) { toast('Subscribe to add books to your library.'); return; }
+  const lib = db.library[currentUser.id] || (db.library[currentUser.id] = []);
+  if (!libEntry(currentUser.id, isbn)) lib.push({ isbn, source: 'subscription', date: todayISO() });
+  saveDb(); renderAll(); toast('📚 Added to My Library');
+}
+function removeFromLibrary(isbn) {
+  const e = libEntry(currentUser.id, isbn);
+  if (!e || e.source === 'purchase') return;
+  db.library[currentUser.id] = db.library[currentUser.id].filter(x => x.isbn !== isbn);
+  saveDb(); renderAll(); toast('Removed from My Library');
+}
 async function downloadBookPDF(isbn) {
   const b = bookByIsbn(isbn); if (!b) return;
+  if (accessOf(b) !== 'full') { toast('🔒 Buy this book or subscribe to download it.'); return; }
   const blob = await getBookPdf(b); if (!blob) return;
   downloadBlob(blob, b.pdfName || (b.title.replace(/[^\w]+/g, '_') + '.pdf'));
   toast(`📥 Downloaded "${b.title}"`);
@@ -1269,10 +1416,22 @@ async function downloadBookPDF(isbn) {
 let pdfViewUrl = null;
 async function readBookPdf(isbn) {
   const b = bookByIsbn(isbn); if (!b) return;
-  const blob = await getBookPdf(b); if (!blob) return;
+  const full = await getBookPdf(b); if (!full) return;
+  const preview = accessOf(b) !== 'full';
+  let blob = full, note = '';
+  if (preview) { // never fall back to the full file if the preview can't be built
+    try {
+      const p = await makePreviewBlob(full);
+      blob = p.blob;
+      note = p.total > p.n ? `👁 Free preview: first ${p.n} of ${p.total} pages.` : `👁 Preview (this book has only ${p.total} pages).`;
+    } catch (e) { toast('❌ Could not build the preview (it needs an internet connection).'); return; }
+  }
   if (pdfViewUrl) URL.revokeObjectURL(pdfViewUrl);
   pdfViewUrl = URL.createObjectURL(blob);
-  $('pdfViewerTitle').textContent = '📖 ' + b.title;
+  $('pdfViewerTitle').textContent = (preview ? '👁 ' : '📖 ') + b.title;
+  $('pdfNoteText').textContent = note;
+  $('pdfBuyBtn').style.display = preview ? '' : 'none';
+  $('pdfBuyBtn').dataset.isbn = isbn;
   $('pdfFrame').src = pdfViewUrl;
   $('pdfViewerModal').style.display = 'flex';
 }
@@ -1362,6 +1521,10 @@ const ACTIONS = {
   'overdue-return': el => { $('overdueModal').style.display = 'none'; openReturnModal(el.dataset.txn); },
   'download-pdf': el => downloadBookPDF(el.dataset.isbn),
   'read-pdf': el => readBookPdf(el.dataset.isbn),
+  'buy-book': el => { closePdfViewer(); openCheckout({ type: 'book', isbn: el.dataset.isbn }); },
+  'subscribe': el => openCheckout({ type: 'subscription', plan: el.dataset.plan }),
+  'add-library': el => addToLibrary(el.dataset.isbn),
+  'remove-library': el => removeFromLibrary(el.dataset.isbn),
   'wishlist': el => toggleWishlist(el.dataset.isbn),
   'cancel-hold': el => { db.holds = db.holds.filter(h => h.id !== el.dataset.id); saveDb(); renderAll(); toast('Hold cancelled.'); }
 };
