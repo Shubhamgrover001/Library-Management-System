@@ -433,7 +433,7 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
             <datalist id="memberList"></datalist>
           </div>
           <div class="row">
-            <div class="form-group"><label>📅 Issue Date</label><input type="date" id="issueDateVal" /></div>
+            <div class="form-group"><label>📅 Issue Date</label><input type="date" id="issueDateVal" onchange="if(this.value)$('dueDateVal').value=addDays(this.value,LOAN_DAYS)" /></div>
             <div class="form-group"><label>📅 Due Date</label><input type="date" id="dueDateVal" /></div>
           </div>
           <div class="btn-group">
@@ -706,14 +706,23 @@ async function seedDb() {
     seq: { txn: 8822, member: 104 }
   };
 }
+function maxSuffix(arr, prefix) {
+  return arr.reduce((m, x) => { const n = parseInt(String(x.id || '').slice(prefix.length), 10); return Number.isFinite(n) && n > m ? n : m; }, 0);
+}
 function loadDb() {
+  const raw = ls.get(DB_KEY);
+  if (!raw) return null;
   try {
-    const d = JSON.parse(ls.get(DB_KEY));
+    const d = JSON.parse(raw);
     if (d && Array.isArray(d.books) && Array.isArray(d.members) && Array.isArray(d.txns) && Array.isArray(d.users)) {
-      d.holds = d.holds || []; d.wishlist = d.wishlist || {}; d.library = d.library || {}; d.payments = d.payments || []; d.seq = d.seq || { txn: 9000, member: 500 };
+      d.holds = d.holds || []; d.wishlist = d.wishlist || {}; d.library = d.library || {}; d.payments = d.payments || [];
+      d.seq = d.seq || {};
+      d.seq.txn = Math.max(Number(d.seq.txn) || 0, maxSuffix(d.txns, 'TX-') + 1, 1);
+      d.seq.member = Math.max(Number(d.seq.member) || 0, maxSuffix(d.members, 'MEM-') + 1, 1);
       return d;
     }
   } catch (e) {}
+  ls.set(DB_KEY + '_bak', raw); // never silently destroy data we could not read
   return null;
 }
 function saveDb() { if (!ls.set(DB_KEY, JSON.stringify(db))) toast('⚠️ Could not save data (browser storage blocked).'); }
@@ -804,6 +813,10 @@ async function confirmLogout() {
 function logoutSession() {
   ls.del(SESSION_KEY);
   currentUser = null;
+  closePdfViewer();
+  document.querySelectorAll('.modal-backdrop').forEach(m => { m.style.display = 'none'; });
+  document.querySelectorAll('main tbody').forEach(t => { t.innerHTML = ''; });
+  $('subCard').innerHTML = '';
   $('auth-screen').style.display = 'flex';
   $('authUsername').value = '';
   $('authPassword').value = '';
@@ -858,9 +871,10 @@ function initiateRegistrationVerification() {
   if (!PHONE_RE.test(contact)) { toast('❌ Enter a valid 10-digit Indian mobile number.'); return; }
   if (pass.length < 6) { toast('❌ Password must be at least 6 characters.'); return; }
   if (pass !== confirm2) { toast('❌ Passwords do not match!'); return; }
-  if (db.users.some(u => u.id === email) || db.members.some(m => m.email.toLowerCase() === email)) { toast('❌ This email is already registered.'); return; }
-  const otp = String(Math.floor(100000 + Math.random() * 900000));
-  pendingReg = { name, email, contact, pass, otp };
+  const known = db.members.find(m => m.email.toLowerCase() === email); // may be a staff-created member with no login yet
+  if (db.users.some(u => u.id === email) || (known && db.users.some(u => u.memberId === known.id))) { toast('❌ This email is already registered.'); return; }
+  const otp = String(100000 + (window.crypto && crypto.getRandomValues ? crypto.getRandomValues(new Uint32Array(1))[0] % 900000 : Math.floor(Math.random() * 900000)));
+  pendingReg = { name, email, contact, pass, otp, memberId: known ? known.id : null };
   closePublicRegisterModal();
   const info = $('verifyEmailInfo');
   info.textContent = '';
@@ -879,11 +893,14 @@ async function verifyCodeAndComplete() {
   if (!pendingReg) return;
   if ($('verificationCodeInput').value.trim() !== pendingReg.otp) { toast('❌ Invalid verification code!'); return; }
   const r = pendingReg;
-  const memberId = 'MEM-' + (db.seq.member++);
-  db.members.push({ id: memberId, name: r.name, email: r.email, contact: r.contact });
+  pendingReg = null; // stop a double-click from registering twice
+  let memberId = r.memberId;
+  if (!memberId) {
+    memberId = 'MEM-' + (db.seq.member++);
+    db.members.push({ id: memberId, name: r.name, email: r.email, contact: r.contact });
+  }
   db.users.push(await makeUser(r.email, r.name, 'user', r.pass, memberId));
   saveDb();
-  pendingReg = null;
   $('emailVerifyModal').style.display = 'none';
   ['pubRegName', 'pubRegEmail', 'pubRegContact', 'pubRegPass', 'pubRegConfirmPass'].forEach(i => { $(i).value = ''; });
   $('authUsername').value = r.email;
@@ -1109,6 +1126,8 @@ async function deleteBook(isbn) {
   db.books = db.books.filter(x => x.isbn !== isbn);
   pdfStore.del(isbn).catch(() => {});
   db.holds = db.holds.filter(h => h.isbn !== isbn);
+  Object.keys(db.wishlist).forEach(k => { db.wishlist[k] = db.wishlist[k].filter(i => i !== isbn); });
+  Object.keys(db.library).forEach(k => { db.library[k] = db.library[k].filter(e => e.isbn !== isbn); });
   saveDb(); renderAll(); toast('Book record deleted.');
 }
 function showBookDetails(isbn) {
@@ -1127,6 +1146,7 @@ function openMemberModalForAdd() {
   editMemberId = null;
   $('memberModalTitle').textContent = '👤 Register New Member';
   ['newMemberName', 'newMemberEmail', 'newMemberContact'].forEach(i => { $(i).value = ''; });
+  $('newMemberEmail').readOnly = false;
   $('memberModal').style.display = 'flex';
 }
 function openMemberModalForEdit(id) {
@@ -1134,6 +1154,7 @@ function openMemberModalForEdit(id) {
   editMemberId = id;
   $('memberModalTitle').textContent = '✏️ Edit Member Record';
   $('newMemberName').value = m.name; $('newMemberEmail').value = m.email; $('newMemberContact').value = m.contact;
+  $('newMemberEmail').readOnly = db.users.some(u => u.memberId === id); // login id follows the email
   $('memberModal').style.display = 'flex';
 }
 function closeMemberModal() { $('memberModal').style.display = 'none'; editMemberId = null; }
@@ -1144,7 +1165,9 @@ function saveMemberRecord() {
   if (!PHONE_RE.test(contact)) { toast('❌ Enter a valid 10-digit Indian mobile number.'); return; }
   if (db.members.some(m => m.email.toLowerCase() === email && m.id !== editMemberId)) { toast('❌ Email already used by another member.'); return; }
   if (editMemberId) {
-    Object.assign(memberById(editMemberId), { name, email, contact });
+    const cur = memberById(editMemberId);
+    if (cur.email.toLowerCase() !== email && db.users.some(u => u.memberId === editMemberId)) { toast('❌ This member has a login; their email cannot be changed here.'); return; }
+    Object.assign(cur, { name, email, contact });
     const u = db.users.find(x => x.memberId === editMemberId); if (u) u.name = name;
     toast('Member record updated successfully!');
   } else {
@@ -1157,6 +1180,10 @@ async function deleteMember(id) {
   const m = memberById(id); if (!m) return;
   if (loansOf(id) > 0) { toast('❌ Cannot delete: member still has books on loan.'); return; }
   if (!(await askConfirm(`Delete member "${m.name}"?`, 'Delete'))) return;
+  db.users.filter(u => u.memberId === id).forEach(u => {
+    delete db.library[u.id]; delete db.wishlist[u.id];
+    db.payments = db.payments.filter(p => p.userId !== u.id);
+  });
   db.members = db.members.filter(x => x.id !== id);
   db.users = db.users.filter(u => u.memberId !== id);
   db.holds = db.holds.filter(h => h.memberId !== id);
@@ -1197,8 +1224,12 @@ function processIssue() {
   if (!issue || !due || due < issue) { toast('❌ Due date must be on or after the issue date.'); return; }
   if (bookStats(book).avail < 1) { toast(`❌ No copies of "${book.title}" available. Try Reserve.`); return; }
   if (activeTxns().some(t => t.memberId === member.id && t.isbn === book.isbn)) { toast('❌ This member already has this book.'); return; }
+  const hasHold = db.holds.some(h => h.memberId === member.id && h.isbn === book.isbn);
+  const othersWaiting = db.holds.filter(h => h.isbn === book.isbn && h.memberId !== member.id).length;
+  if (!hasHold && othersWaiting >= bookStats(book).avail) { toast(`❌ Remaining copies of "${book.title}" are reserved for members in the hold queue.`); return; }
   const id = 'TX-' + (db.seq.txn++);
   db.txns.push({ id, memberId: member.id, isbn: book.isbn, issueDate: issue, dueDate: due, returnDate: null, status: 'Issued', fine: 0, payMode: null });
+  db.holds = db.holds.filter(h => !(h.memberId === member.id && h.isbn === book.isbn)); // hold fulfilled
   saveDb();
   $('issueBookInput').value = ''; $('issueMemberInput').value = ''; $('liveStockHint').style.display = 'none';
   setDefaultDates(); renderAll();
@@ -1209,6 +1240,7 @@ function reserveBook(isbn) {
   const m = currentUser.role === 'user' ? memberById(currentUser.memberId) : findMember($('issueMemberInput').value);
   if (!m) { toast('Enter a valid Member ID in the Quick Issue form first.'); return; }
   if (db.holds.some(h => h.memberId === m.id && h.isbn === isbn)) { toast('A hold already exists for this member and book.'); return; }
+  if (activeTxns().some(t => t.memberId === m.id && t.isbn === isbn)) { toast('You already have this book on loan.'); return; }
   db.holds.push({ id: 'H-' + Date.now(), memberId: m.id, isbn, date: todayISO() });
   saveDb(); renderAll();
   toast(`📌 Hold placed for "${b.title}" (${m.name}).`);
@@ -1224,6 +1256,7 @@ function openReturnModal(txnId) {
 }
 function openReturnFromDashboard() {
   const book = findBook($('issueBookInput').value), member = findMember($('issueMemberInput').value);
+  if (($('issueBookInput').value.trim() && !book) || ($('issueMemberInput').value.trim() && !member)) { toast('❌ Book or member not recognised. Pick from the suggestions.'); return; }
   const match = activeTxns().find(t => (!book || t.isbn === book.isbn) && (!member || t.memberId === member.id) && (book || member));
   openReturnModal(match ? match.id : null);
 }
@@ -1334,7 +1367,8 @@ const money0 = n => '₹' + Number(n).toLocaleString('en-IN');
 const subActive = u => !!(u && u.sub && u.sub.expires >= todayISO());
 const libEntry = (uid, isbn) => (db.library[uid] || []).find(e => e.isbn === isbn);
 function accessOf(b) {
-  if (!currentUser || currentUser.role !== 'user') return 'full'; // staff
+  if (!currentUser) return 'none'; // fail closed when nobody is logged in
+  if (currentUser.role !== 'user') return 'full'; // staff
   const e = libEntry(currentUser.id, b.isbn);
   return (e && e.source === 'purchase') || subActive(currentUser) ? 'full' : 'preview';
 }
@@ -1536,9 +1570,25 @@ const ACTIONS = {
   'wishlist': el => toggleWishlist(el.dataset.isbn),
   'cancel-hold': el => { db.holds = db.holds.filter(h => h.id !== el.dataset.id); saveDb(); renderAll(); toast('Hold cancelled.'); }
 };
+const PUBLIC_ACTIONS = ['toggle-pw', 'recent-user'];
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-action]');
-  if (el && ACTIONS[el.dataset.action]) ACTIONS[el.dataset.action](el);
+  if (!el || !ACTIONS[el.dataset.action]) return;
+  if (!currentUser && !PUBLIC_ACTIONS.includes(el.dataset.action)) return; // no actions without a session
+  ACTIONS[el.dataset.action](el);
+});
+/* Keep tabs in sync: another tab saved data or logged out */
+window.addEventListener('storage', e => {
+  if (e.key === DB_KEY) {
+    const d = loadDb(); if (!d) return;
+    db = d;
+    if (currentUser) {
+      const u = db.users.find(x => x.id === currentUser.id);
+      if (!u) { logoutSession(); return; }
+      currentUser = u;
+    }
+    renderAll();
+  } else if (e.key === SESSION_KEY && !e.newValue && currentUser) logoutSession();
 });
 const MODAL_CLOSERS = { checkoutModal: closeCheckout, pdfViewerModal: closePdfViewer, bookModal: closeBookModal, memberModal: closeMemberModal, publicRegisterModal: closePublicRegisterModal };
 document.addEventListener('keydown', e => {
