@@ -18,12 +18,14 @@ Open `index.html` in any modern browser (internet is needed once per preview to 
 Demo logins: `admin@library.org` / `Admin@123` · `librarian@library.org` / `Librarian@123`
 
 ## Tests
-35 automated end-to-end tests (headless Chromium) cover login/roles, issue/return/fines, XSS, CSV, PDF preview (7 pages) and paywall, subscription/purchase, holds, wishlist, persistence and accessibility.
+86 automated end-to-end checks (headless Chromium via Playwright) cover login/roles, issue/return/fines, hold queue, XSS, CSV, PDF preview (7 pages) and paywall, subscription/purchase, wishlist, persistence, multi-tab safety and accessibility.
 
 ```bash
-npm i playwright pdf-lib        # dev dependencies
-python3 -m http.server 8765 &   # serve the folder
-node tests/e2e.js               # writes tests/results.json
+npm install                          # installs Playwright and pdf-lib (dev dependencies)
+npx playwright install chromium      # one-time browser download
+npm test                             # runs both suites: tests/e2e.js (35) and tests/e2e-flows.js (51)
 ```
+
+`npm test` starts its own local server on port 8765, so nothing else needs to be running. The same command runs in GitHub Actions on every push (`.github/workflows/node.js.yml`).
 
 > Note: login, payments and OTP are client-side simulations (demo). A production version needs a real backend (e.g. Node + MySQL), server-side authorization and a payment gateway.

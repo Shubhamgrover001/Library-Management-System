@@ -1,0 +1,13 @@
+{
+  "name": "library-management-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LMS Portal: single-file library management web app with end-to-end tests",
+  "scripts": {
+    "test": "node tests/run-all.js"
+  },
+  "devDependencies": {
+    "pdf-lib": "1.17.1",
+    "playwright": "1.63.0"
+  }
+}
