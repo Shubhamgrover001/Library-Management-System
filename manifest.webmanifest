@@ -1,0 +1,14 @@
+{
+  "name": "LMS Portal - Library Management System",
+  "short_name": "LMS Portal",
+  "description": "Library management: catalogue, issue and return, fines, reports, e-books.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0284c7",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

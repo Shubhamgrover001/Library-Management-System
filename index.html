@@ -4,6 +4,10 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Library Management System - LMS Portal</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="theme-color" content="#0284c7" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<link rel="icon" type="image/png" href="icon-192.png" />
 <style>
 :root {
   --primary: #0284c7; --primary-hover: #0369a1; --secondary: #0b1329; --bg: #f8fafc;
@@ -221,6 +225,18 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <!-- IN-PAGE CONFIRM (native confirm() can be blocked by browsers/previews) -->
+<div id="scanModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="scanTitle">
+  <div class="modal-card" style="max-width: 420px;">
+    <h3 id="scanTitle" style="color: var(--text-heading); margin-bottom: 10px;">📷 Scan</h3>
+    <video id="scanVideo" playsinline muted style="width:100%; border-radius:6px; background:#000; display:none; max-height:260px;"></video>
+    <p id="scanMsg" style="font-size:0.85rem; opacity:0.85; margin:8px 0;"></p>
+    <div class="form-group"><label>⌨️ Or type / USB-scan the code</label>
+      <div class="input-with-scan"><input type="text" id="scanManual" placeholder="ISBN, member ID or card code" onkeydown="if(event.key==='Enter')submitScanManual()" /><button class="btn-scan" onclick="submitScanManual()">Use</button></div>
+    </div>
+    <div class="btn-group"><button class="btn-outline" style="flex:1;" onclick="closeScanner()">Close</button></div>
+  </div>
+</div>
+
 <div id="confirmModal" class="modal-backdrop" style="z-index: 9999990;">
   <div class="modal-card" style="max-width: 380px;">
     <h3 style="color: var(--text-heading); margin-bottom: 10px;">⚠️ Please confirm</h3>
@@ -374,6 +390,7 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
   <header>
     <div class="header-title"><h2 id="page-title">Library Overview</h2></div>
     <div class="status-area">
+      <span id="syncBadge" class="badge badge-success" style="display:none;" title="Data is shared through the LMS server"></span>
       <button class="btn-top" onclick="toggleTheme()" id="themeToggleBtn">🌙 Dark Mode</button>
       <button class="btn-top" onclick="exportData()" id="exportCsvBtn">📥 Export CSV</button>
       <button class="btn-top" onclick="triggerSplash()">↺ Replay Intro</button>
@@ -418,8 +435,8 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
           <div class="form-group">
             <label>📚 Book ISBN or Title</label>
             <div class="input-with-scan">
-              <input type="text" id="issueBookInput" list="bookList" placeholder="e.g. 978-0132350884 or Clean Code" oninput="checkBookStock()" />
-              <button class="btn-scan" onclick="simulateScan('book')" title="Demo scan: picks a random book">📷 Scan</button>
+              <input type="text" id="issueBookInput" list="bookList" placeholder="e.g. 978-0132350884 or Clean Code" oninput="checkBookStock()" onkeydown="if(event.key==='Enter'){event.preventDefault();$('issueMemberInput').focus();}" />
+              <button class="btn-scan" onclick="openScanner('book')" title="Scan a book barcode with the camera, or type the code">📷 Scan</button>
             </div>
             <div id="liveStockHint" class="stock-hint" style="display:none;"></div>
             <datalist id="bookList"></datalist>
@@ -428,7 +445,7 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
             <label>👤 Member ID or Name</label>
             <div class="input-with-scan">
               <input type="text" id="issueMemberInput" list="memberList" placeholder="e.g. Rahul Sharma or MEM-101" />
-              <button class="btn-scan" onclick="simulateScan('member')" title="Demo scan: picks a random member">📷 Scan</button>
+              <button class="btn-scan" onclick="openScanner('member')" title="Scan a member card barcode with the camera, or type the code">📷 Scan</button>
             </div>
             <datalist id="memberList"></datalist>
           </div>
@@ -519,12 +536,44 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
       </div>
     </section>
 
+    <!-- REPORTS -->
+    <section id="view-reports" class="view-section">
+      <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="stat-card"><div class="label">Total Loans <span class="stat-icon">🔄</span></div><div class="val" id="repTotal">0</div></div>
+        <div class="stat-card"><div class="label">Active Loans <span class="stat-icon">📌</span></div><div class="val" id="repActive">0</div></div>
+        <div class="stat-card"><div class="label">Overdue Now <span class="stat-icon">🚨</span></div><div class="val" style="color: var(--danger);" id="repOverdue">0</div></div>
+        <div class="stat-card"><div class="label">Fines Outstanding <span class="stat-icon">💰</span></div><div class="val" id="repFines">₹0.00</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🏆 Most Borrowed Books <button class="btn-top" style="float:right;" data-action="export-report" data-report="popular">📥 CSV</button></div>
+        <table><thead><tr><th>#</th><th>📚 Book</th><th>✍️ Author</th><th>🔄 Loans</th></tr></thead><tbody id="repPopularBody"></tbody></table>
+      </div>
+      <div class="card">
+        <div class="card-title">👥 Most Active Members</div>
+        <table><thead><tr><th>#</th><th>👤 Member</th><th>🔄 Loans</th></tr></thead><tbody id="repMembersBody"></tbody></table>
+      </div>
+      <div class="card">
+        <div class="card-title">📅 Loans per Month (last 6) </div>
+        <table><thead><tr><th>Month</th><th>Loans</th><th></th></tr></thead><tbody id="repMonthBody"></tbody></table>
+      </div>
+      <div class="card">
+        <div class="card-title">🔔 Reminders to Send <span id="repRemCount" class="badge badge-warning"></span></div>
+        <p style="font-size:0.85rem; opacity:0.8; margin-bottom:10px;">Loans due within 3 days or already overdue. Buttons open WhatsApp or your email app with the message ready (nothing is sent automatically).</p>
+        <table><thead><tr><th>👤 Member</th><th>📚 Book</th><th>📅 Due</th><th>🔔 Status</th><th>📨 Send</th></tr></thead><tbody id="repRemBody"></tbody></table>
+      </div>
+      <div class="card">
+        <div class="card-title">🚨 Overdue List<button class="btn-top" style="float:right;" data-action="export-report" data-report="overdue">📥 CSV</button></div>
+        <table><thead><tr><th>🏷 Txn ID</th><th>👤 Member</th><th>📚 Book</th><th>📅 Due</th><th>⏳ Days Late</th><th>💰 Fine</th></tr></thead><tbody id="repOverdueBody"></tbody></table>
+      </div>
+    </section>
+
     <!-- USER PORTAL -->
     <section id="view-user-portal" class="view-section">
       <div class="card" style="background: linear-gradient(135deg, rgba(2, 132, 199, 0.08) 0%, rgba(56, 189, 248, 0.08) 100%);">
         <div class="card-title">👋 Welcome to Your Member Reading Portal, <span id="userPortalName">Reader</span></div>
         <p style="font-size: 0.9rem; opacity: 0.85;">Preview the first 7 pages of any book for free. Subscribe or buy a book to read it fully and download it.</p>
       </div>
+      <div class="card reminder-box" id="userReminders" aria-live="polite"></div>
       <div class="card" id="subCard"></div>
       <div class="card">
         <div class="card-title">📚 Digital E-Library</div>
@@ -709,23 +758,86 @@ async function seedDb() {
 function maxSuffix(arr, prefix) {
   return arr.reduce((m, x) => { const n = parseInt(String(x.id || '').slice(prefix.length), 10); return Number.isFinite(n) && n > m ? n : m; }, 0);
 }
+function normalizeDb(d) {
+  if (d && Array.isArray(d.books) && Array.isArray(d.members) && Array.isArray(d.txns) && Array.isArray(d.users)) {
+    d.holds = d.holds || []; d.wishlist = d.wishlist || {}; d.library = d.library || {}; d.payments = d.payments || [];
+    d.seq = d.seq || {};
+    d.seq.txn = Math.max(Number(d.seq.txn) || 0, maxSuffix(d.txns, 'TX-') + 1, 1);
+    d.seq.member = Math.max(Number(d.seq.member) || 0, maxSuffix(d.members, 'MEM-') + 1, 1);
+    return d;
+  }
+  return null;
+}
 function loadDb() {
   const raw = ls.get(DB_KEY);
   if (!raw) return null;
-  try {
-    const d = JSON.parse(raw);
-    if (d && Array.isArray(d.books) && Array.isArray(d.members) && Array.isArray(d.txns) && Array.isArray(d.users)) {
-      d.holds = d.holds || []; d.wishlist = d.wishlist || {}; d.library = d.library || {}; d.payments = d.payments || [];
-      d.seq = d.seq || {};
-      d.seq.txn = Math.max(Number(d.seq.txn) || 0, maxSuffix(d.txns, 'TX-') + 1, 1);
-      d.seq.member = Math.max(Number(d.seq.member) || 0, maxSuffix(d.members, 'MEM-') + 1, 1);
-      return d;
-    }
-  } catch (e) {}
+  try { const d = normalizeDb(JSON.parse(raw)); if (d) return d; } catch (e) {}
   ls.set(DB_KEY + '_bak', raw); // never silently destroy data we could not read
   return null;
 }
-function saveDb() { if (!ls.set(DB_KEY, JSON.stringify(db))) toast('⚠️ Could not save data (browser storage blocked).'); }
+function saveDb() {
+  if (!ls.set(DB_KEY, JSON.stringify(db))) toast('⚠️ Could not save data (browser storage blocked).');
+  if (sync.on) schedulePush();
+}
+
+/* ---- Optional sync with server.js (falls back to browser storage when no server answers) ---- */
+const sync = { on: false, rev: 0, timer: null, busy: false, dirty: false };
+function syncBadge(state) {
+  const b = $('syncBadge'); if (!b) return;
+  b.style.display = sync.on ? '' : 'none';
+  b.textContent = state === 'offline' ? '⚠️ Offline, will retry' : '☁️ Synced';
+  const tag = $('connStatusTag'); if (tag) tag.textContent = sync.on ? '🗄️ Server DB (+ local copy)' : '💾 Local Storage DB';
+}
+async function syncConnect() {
+  if (!/^https?:$/.test(location.protocol)) return;
+  try {
+    const r = await fetch('/api/db', { cache: 'no-store' });
+    if (!r.headers.get('X-LMS-Sync')) return; // some other server: stay local
+    sync.on = true;
+    if (r.status === 200) {
+      const j = await r.json(), d = normalizeDb(j.db);
+      if (d) { db = d; sync.rev = j.rev; ls.set(DB_KEY, JSON.stringify(db)); }
+    } else if (r.status === 404) { sync.rev = (await r.json()).rev || 0; sync.dirty = true; } // server is empty: our data will be uploaded
+  } catch (e) { sync.on = false; }
+}
+function schedulePush() { sync.dirty = true; clearTimeout(sync.timer); sync.timer = setTimeout(pushDb, 300); }
+async function pushDb() {
+  if (!sync.on || !sync.dirty) return;
+  if (sync.busy) { schedulePush(); return; }
+  sync.busy = true; sync.dirty = false;
+  try {
+    const r = await fetch('/api/db', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ baseRev: sync.rev, db }) });
+    if (r.status === 200) { sync.rev = (await r.json()).rev; syncBadge('ok'); }
+    else if (r.status === 409) {
+      const j = await r.json(), d = normalizeDb(j.db);
+      if (d) { sync.rev = j.rev; applyRemoteDb(d); toast('🔄 Someone else saved first. Loaded the latest data, please repeat your last change.', 7000); }
+    } else throw new Error('HTTP ' + r.status);
+  } catch (e) { sync.dirty = true; syncBadge('offline'); }
+  finally { sync.busy = false; }
+}
+async function pollSync() {
+  if (!sync.on) return;
+  if (sync.dirty) { pushDb(); return; }
+  if (sync.busy) return;
+  try {
+    const rev = (await (await fetch('/api/rev', { cache: 'no-store' })).json()).rev;
+    syncBadge('ok');
+    if (rev !== sync.rev && !sync.dirty && !sync.busy) {
+      const j = await (await fetch('/api/db', { cache: 'no-store' })).json(), d = normalizeDb(j.db);
+      if (d && !sync.dirty) { sync.rev = j.rev; applyRemoteDb(d); }
+    }
+  } catch (e) { syncBadge('offline'); }
+}
+function applyRemoteDb(d) {
+  db = d;
+  ls.set(DB_KEY, JSON.stringify(db));
+  if (currentUser) {
+    const u = db.users.find(x => x.id === currentUser.id);
+    if (!u) { logoutSession(); return; }
+    currentUser = u;
+  }
+  renderAll();
+}
 
 /* ================= DERIVED DATA ================= */
 const activeTxns = () => db.txns.filter(t => t.status !== 'Returned');
@@ -814,9 +926,11 @@ function logoutSession() {
   ls.del(SESSION_KEY);
   currentUser = null;
   closePdfViewer();
+  closeScanner();
   document.querySelectorAll('.modal-backdrop').forEach(m => { m.style.display = 'none'; });
   document.querySelectorAll('main tbody').forEach(t => { t.innerHTML = ''; });
   $('subCard').innerHTML = '';
+  $('userReminders').innerHTML = '';
   $('auth-screen').style.display = 'flex';
   $('authUsername').value = '';
   $('authPassword').value = '';
@@ -825,12 +939,12 @@ function logoutSession() {
 }
 
 const NAV = {
-  admin: [['dashboard', '📊 Dashboard'], ['books', '📖 Books Catalog'], ['members', '👥 Member Directory'], ['transactions', '🔄 Issue & Return'], ['fines', '💰 Fines & Payments'],['settings', '⚙️ Settings & Security']],
-  librarian: [['dashboard', '📊 Dashboard'], ['books', '📖 Books Catalog'], ['transactions', '🔄 Issue & Return'], ['fines', '💰 Fines & Payments'],['settings', '⚙️ Settings & Security']],
+  admin: [['dashboard', '📊 Dashboard'], ['books', '📖 Books Catalog'], ['members', '👥 Member Directory'], ['transactions', '🔄 Issue & Return'], ['fines', '💰 Fines & Payments'], ['reports', '📈 Reports'],['settings', '⚙️ Settings & Security']],
+  librarian: [['dashboard', '📊 Dashboard'], ['books', '📖 Books Catalog'], ['transactions', '🔄 Issue & Return'], ['fines', '💰 Fines & Payments'], ['reports', '📈 Reports'],['settings', '⚙️ Settings & Security']],
   user: [['user-portal', '📖 E-Books Catalog'], ['user-library', '📚 My Library'], ['user-loans', '📌 My Loans & Hold'],['user-wishlist', '⭐ Saved Wishlist'], ['settings', '⚙️ Settings & Security']]
 };
 const TITLES = {
-  dashboard: 'Library Overview', books: 'Book Catalog & Inventory', members: 'Member Directory', transactions: 'Issue & Return Portal', fines: 'Fines & Payments',
+  dashboard: 'Library Overview', books: 'Book Catalog & Inventory', members: 'Member Directory', transactions: 'Issue & Return Portal', fines: 'Fines & Payments', reports: 'Reports & Analytics',
   'user-portal': 'My Member Reading Portal', 'user-loans': 'My Loans & Hold Queue', 'user-library': 'My Personal Library', 'user-wishlist': 'Saved Wishlist Books', settings: 'Account Settings & Security'
 };
 function setupRole(user) {
@@ -912,7 +1026,89 @@ async function verifyCodeAndComplete() {
 function renderAll() {
   if (!db) return;
   renderStats(); renderAnalytics(); renderDashCatalog(); renderAudit(); renderBooks(); renderMembers();
-  renderLoanSelect(); renderOverdue(); renderAllTxns(); renderFines(); renderLists(); renderUserViews();
+  renderLoanSelect(); renderOverdue(); renderAllTxns(); renderFines(); renderReports(); renderReminders(); renderLists(); renderUserViews();
+}
+function reportData() {
+  const bookC = {}, memC = {}, monC = {};
+  db.txns.forEach(t => {
+    bookC[t.isbn] = (bookC[t.isbn] || 0) + 1;
+    memC[t.memberId] = (memC[t.memberId] || 0) + 1;
+    const m = String(t.issueDate).slice(0, 7);
+    monC[m] = (monC[m] || 0) + 1;
+  });
+  const top = (c, n) => Object.keys(c).sort((a, b) => c[b] - c[a] || a.localeCompare(b)).slice(0, n).map(k => [k, c[k]]);
+  const months = [], now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    months.push([key, monC[key] || 0]);
+  }
+  const overdue = activeTxns().filter(t => t.dueDate < todayISO()).map(t => ({ t, days: overdueDays(t.dueDate, todayISO()) })).sort((a, b) => b.days - a.days);
+  return { books: top(bookC, 5), members: top(memC, 5), months, overdue };
+}
+function renderReports() {
+  const r = reportData();
+  $('repTotal').textContent = db.txns.length.toLocaleString();
+  $('repActive').textContent = activeTxns().length.toLocaleString();
+  $('repOverdue').textContent = r.overdue.length.toLocaleString();
+  $('repFines').textContent = money(activeTxns().reduce((s, t) => s + fineOf(t), 0));
+  $('repPopularBody').innerHTML = r.books.map(([isbn, n], i) => `<tr><td>${i + 1}</td><td>${esc(bookTitle(isbn))}</td><td>${esc((bookByIsbn(isbn) || {}).author || '-')}</td><td>${n}</td></tr>`).join('') || '<tr><td colspan="4" class="empty">No loans yet</td></tr>';
+  $('repMembersBody').innerHTML = r.members.map(([id, n], i) => `<tr><td>${i + 1}</td><td>${esc(memberName(id))}</td><td>${n}</td></tr>`).join('') || '<tr><td colspan="3" class="empty">No loans yet</td></tr>';
+  const max = Math.max(1, ...r.months.map(m => m[1]));
+  $('repMonthBody').innerHTML = r.months.map(([k, n]) => `<tr><td>${esc(k)}</td><td>${n}</td><td><div style="height:10px; border-radius:5px; background:var(--accent); width:${Math.round(n / max * 100)}%; min-width:${n ? 4 : 0}px;"></div></td></tr>`).join('');
+  $('repOverdueBody').innerHTML = r.overdue.map(({ t, days }) => `<tr><td>${esc(t.id)}</td><td>${esc(memberName(t.memberId))}</td><td>${esc(bookTitle(t.isbn))}</td><td>${esc(fmtDate(t.dueDate))}</td><td>${days}</td><td>${money(days * FINE_PER_DAY)}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">No overdue loans 🎉</td></tr>';
+}
+/* ---- Reminders: due soon, overdue, hold ready ---- */
+const DUE_SOON_DAYS = 3;
+const daysUntil = iso => Math.round((new Date(iso + 'T00:00:00') - new Date(todayISO() + 'T00:00:00')) / 86400000);
+function loanReminder(t) {
+  const d = daysUntil(t.dueDate), title = bookTitle(t.isbn);
+  if (d < 0) return { kind: 'overdue', label: `Overdue by ${-d} day${d === -1 ? '' : 's'}`, text: `"${title}" is overdue by ${-d} day${d === -1 ? '' : 's'}. Fine so far: ${money(-d * FINE_PER_DAY)}. Please return it soon.` };
+  if (d <= DUE_SOON_DAYS) return { kind: 'due-soon', label: d === 0 ? 'Due today' : `Due in ${d} day${d === 1 ? '' : 's'}`, text: `"${title}" is due ${d === 0 ? 'today' : 'on ' + fmtDate(t.dueDate)}. Please return or renew it on time to avoid fines.` };
+  return null;
+}
+function holdsReady(memberId) {
+  return db.holds.filter(h => h.memberId === memberId).filter(h => {
+    const b = bookByIsbn(h.isbn); if (!b) return false;
+    const queue = db.holds.filter(x => x.isbn === h.isbn);
+    return queue.indexOf(h) < bookStats(b).avail;
+  });
+}
+function renderReminders() {
+  if (!currentUser) return;
+  if (currentUser.role === 'user') {
+    const items = [];
+    activeTxns().filter(t => t.memberId === currentUser.memberId).forEach(t => { const r = loanReminder(t); if (r) items.push({ cls: r.kind === 'overdue' ? 'badge-danger' : 'badge-warning', icon: r.kind === 'overdue' ? '🚨' : '⏰', text: r.text }); });
+    holdsReady(currentUser.memberId).forEach(h => items.push({ cls: 'badge-success', icon: '📗', text: `Your hold "${bookTitle(h.isbn)}" is ready. Visit the library to borrow it.` }));
+    $('userReminders').innerHTML = `<div class="card-title">🔔 Reminders ${items.length ? `<span class="badge badge-warning">${items.length}</span>` : ''}</div>` +
+      (items.length ? items.map(i => `<div style="padding:6px 0;"><span class="badge ${i.cls}">${i.icon}</span> ${esc(i.text)}</div>`).join('') : '<p style="opacity:0.8; font-size:0.9rem;">✅ You are all caught up. No loans are due soon.</p>');
+    return;
+  }
+  const rows = activeTxns().map(t => ({ t, r: loanReminder(t) })).filter(x => x.r).sort((a, b) => a.t.dueDate.localeCompare(b.t.dueDate));
+  $('repRemCount').textContent = rows.length ? rows.length : '';
+  $('repRemBody').innerHTML = rows.map(({ t, r }) => {
+    const m = memberById(t.memberId) || {};
+    const msg = `Hello ${m.name || ''}, library reminder: ${r.text}`;
+    const phone = String(m.contact || '').replace(/\D/g, '');
+    const wa = /^[6-9]\d{9}$/.test(phone) ? `<a class="btn-top" target="_blank" rel="noopener noreferrer" href="https://wa.me/91${phone}?text=${encodeURIComponent(msg)}">💬 WhatsApp</a>` : '';
+    const mail = m.email ? `<a class="btn-top" href="mailto:${esc(encodeURIComponent(m.email).replace(/%40/g, '@'))}?subject=${encodeURIComponent('Library reminder')}&amp;body=${esc(encodeURIComponent(msg))}">✉️ Email</a>` : '';
+    return `<tr><td>${esc(memberName(t.memberId))}</td><td>${esc(bookTitle(t.isbn))}</td><td>${esc(fmtDate(t.dueDate))}</td><td><span class="badge ${r.kind === 'overdue' ? 'badge-danger' : 'badge-warning'}">${esc(r.label)}</span></td><td>${wa} ${mail}</td></tr>`;
+  }).join('') || '<tr><td colspan="5" class="empty">No reminders needed 🎉</td></tr>';
+}
+function exportReport(kind) {
+  if (!currentUser || currentUser.role === 'user') return;
+  const r = reportData();
+  let head, rows;
+  if (kind === 'overdue') {
+    head = ['Txn ID', 'Member ID', 'Member', 'ISBN', 'Book', 'Due Date', 'Days Late', 'Fine (INR)'];
+    rows = r.overdue.map(({ t, days }) => [t.id, t.memberId, memberName(t.memberId), t.isbn, bookTitle(t.isbn), t.dueDate, days, (days * FINE_PER_DAY).toFixed(2)]);
+  } else {
+    head = ['Rank', 'ISBN', 'Book', 'Author', 'Loans'];
+    rows = r.books.map(([isbn, n], i) => [i + 1, isbn, bookTitle(isbn), (bookByIsbn(isbn) || {}).author || '', n]);
+  }
+  const csv = '﻿' + [head].concat(rows).map(x => x.map(csvCell).join(',')).join('\r\n');
+  downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), 'LMS_' + (kind === 'overdue' ? 'Overdue' : 'Popular_Books') + '_' + todayISO() + '.csv');
+  toast('📥 Report exported as CSV!');
 }
 function renderStats() {
   const today = todayISO();
@@ -1203,16 +1399,72 @@ function checkBookStock() {
   hint.style.display = 'inline-block';
   hint.textContent = b ? `📦 ${bookStats(b).avail} of ${b.total} copies available` : '❓ No exact match yet';
 }
-function simulateScan(type) {
+/* ---- Barcode scanning: camera (BarcodeDetector) with typed / USB-scanner fallback ---- */
+let scanState = null;
+const isbnDigits = s => String(s).replace(/[^0-9Xx]/g, '').toUpperCase();
+function matchScan(type, raw) {
+  const q = String(raw || '').trim();
+  if (!q) return null;
   if (type === 'book') {
-    if (!db.books.length) return;
-    const b = db.books[Math.floor(Math.random() * db.books.length)];
-    $('issueBookInput').value = b.isbn; checkBookStock(); toast('📷 Barcode scanned: ' + b.title);
-  } else {
-    if (!db.members.length) return;
-    const m = db.members[Math.floor(Math.random() * db.members.length)];
-    $('issueMemberInput').value = m.id; toast('📷 Member ID scanned: ' + m.name);
+    const d = isbnDigits(q);
+    return findBook(q) || (d.length >= 10 ? db.books.find(b => isbnDigits(b.isbn) === d) : null) || null;
   }
+  return findMember(q);
+}
+function applyScan(type, raw) {
+  const hit = matchScan(type, raw);
+  if (!hit) { toast('❌ No ' + type + ' found for code: ' + String(raw).slice(0, 40)); return false; }
+  if (type === 'book') { $('issueBookInput').value = hit.isbn; checkBookStock(); toast('📷 Book: ' + hit.title); }
+  else { $('issueMemberInput').value = hit.id; toast('📷 Member: ' + hit.name); }
+  return true;
+}
+async function openScanner(type) {
+  closeScanner();
+  scanState = { type, stream: null, stop: false, last: '' };
+  const st = scanState, video = $('scanVideo');
+  $('scanTitle').textContent = type === 'book' ? '📷 Scan book barcode' : '📷 Scan member ID';
+  $('scanManual').value = '';
+  $('scanMsg').textContent = '';
+  video.style.display = 'none';
+  $('scanModal').style.display = 'flex';
+  $('scanManual').focus();
+  if (!('BarcodeDetector' in window) || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    $('scanMsg').textContent = 'Camera scanning is not supported in this browser. Use a USB scanner or type the code below.';
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    if (st.stop) { stream.getTracks().forEach(t => t.stop()); return; }
+    st.stream = stream;
+    video.srcObject = stream; video.style.display = '';
+    await video.play();
+    $('scanMsg').textContent = 'Point the camera at the barcode…';
+    const det = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'code_128', 'qr_code'] });
+    const loop = async () => {
+      if (st.stop) return;
+      try {
+        const codes = await det.detect(video);
+        const raw = codes.length ? codes[0].rawValue : '';
+        if (raw && raw !== st.last) { st.last = raw; if (applyScan(type, raw)) { closeScanner(); return; } }
+      } catch (e) { /* frame not ready */ }
+      setTimeout(loop, 300);
+    };
+    loop();
+  } catch (e) {
+    $('scanMsg').textContent = 'Camera not available (permission denied or no camera). Type the code below instead.';
+  }
+}
+function submitScanManual() {
+  if (scanState && applyScan(scanState.type, $('scanManual').value)) closeScanner();
+}
+function closeScanner() {
+  if (scanState) {
+    scanState.stop = true;
+    if (scanState.stream) scanState.stream.getTracks().forEach(t => t.stop());
+  }
+  scanState = null;
+  const v = $('scanVideo'); if (v) { v.srcObject = null; v.style.display = 'none'; }
+  const m = $('scanModal'); if (m) m.style.display = 'none';
 }
 function processIssue() {
   const bookQ = $('issueBookInput').value.trim(), memQ = $('issueMemberInput').value.trim();
@@ -1552,6 +1804,7 @@ function triggerSplash() {
 /* ================= EVENT DELEGATION ================= */
 const ACTIONS = {
   'nav': el => switchView(el.dataset.view),
+  'export-report': el => exportReport(el.dataset.report),
   'toggle-pw': el => togglePw(el.dataset.target, el),
   'recent-user': el => { $('authUsername').value = el.dataset.id; $('authPassword').focus(); },
   'book-detail': el => showBookDetails(el.dataset.isbn),
@@ -1580,14 +1833,9 @@ document.addEventListener('click', e => {
 /* Keep tabs in sync: another tab saved data or logged out */
 window.addEventListener('storage', e => {
   if (e.key === DB_KEY) {
+    if (sync.on) { setTimeout(pollSync, 700); return; } // the server is the source of truth: re-sync from it
     const d = loadDb(); if (!d) return;
-    db = d;
-    if (currentUser) {
-      const u = db.users.find(x => x.id === currentUser.id);
-      if (!u) { logoutSession(); return; }
-      currentUser = u;
-    }
-    renderAll();
+    applyRemoteDb(d);
   } else if (e.key === SESSION_KEY && !e.newValue && currentUser) logoutSession();
 });
 const MODAL_CLOSERS = { checkoutModal: closeCheckout, pdfViewerModal: closePdfViewer, bookModal: closeBookModal, memberModal: closeMemberModal, publicRegisterModal: closePublicRegisterModal };
@@ -1612,7 +1860,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
   applyTheme(ls.get(THEME_KEY) === 'dark' ? 'dark' : 'light');
   db = loadDb();
+  await syncConnect(); // may replace db with the server's copy
   if (!db) { db = await seedDb(); saveDb(); }
+  else if (sync.on && sync.dirty) schedulePush(); // empty server: upload what we have
+  syncBadge('ok');
+  setInterval(pollSync, 5000);
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {}); // offline support
   renderRecentLogins();
   setDefaultDates();
   const sid = ls.get(SESSION_KEY);

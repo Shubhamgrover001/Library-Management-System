@@ -30,7 +30,7 @@ server.listen(8765, async () => {
   const local = path.join(root, 'node_modules', 'pdf-lib', 'dist', 'pdf-lib.min.js');
   if (!env.PDFLIB_PATH && fs.existsSync(local)) env.PDFLIB_PATH = local; // lets the preview test run without internet
   let failed = 0;
-  for (const f of ['tests/e2e.js', 'tests/e2e-flows.js']) {
+  for (const f of ['tests/e2e.js', 'tests/e2e-flows.js', 'tests/e2e-sync.js']) {
     console.log('\n=== ' + f + ' ===');
     const code = await run(f, env); // async spawn, so this server keeps answering the browser
     if (code !== 0) { failed++; console.log('FAILED: ' + f); }

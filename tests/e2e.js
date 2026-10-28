@@ -36,8 +36,8 @@ const ok = (c, m) => { if (!c) throw new Error(m || 'assertion failed'); };
     eq(await page.textContent('#statBooks'), '9'); eq(await page.textContent('#statIssued'), '3');
     eq(await page.textContent('#statMembers'), '3'); eq(await page.textContent('#statOverdue'), '1');
   });
-  await T('T02', 'Admin sees 6 menu items; CSV export visible', async () => {
-    eq(await navCount(), 6); ok(await page.locator('#exportCsvBtn').isVisible(), 'export hidden');
+  await T('T02', 'Admin sees 7 menu items; CSV export visible', async () => {
+    eq(await navCount(), 7); ok(await page.locator('#exportCsvBtn').isVisible(), 'export hidden');
   });
   await T('T03', 'Add book with price appears in inventory; bad ISBN rejected', async () => {
     await nav('books'); await page.click('text=+ Add New Book');
@@ -97,8 +97,8 @@ const ok = (c, m) => { if (!c) throw new Error(m || 'assertion failed'); };
     await page.evaluate(() => { if (typeof loginLock !== 'undefined') { loginLock.until = 0; loginLock.fails = 0; } });
     if (!(await page.isVisible('#auth-screen'))) await logout();
   });
-  await T('T14', 'Librarian sees 5 items and no Member Directory', async () => {
-    await login('librarian@library.org', 'Librarian@123'); eq(await navCount(), 5);
+  await T('T14', 'Librarian sees 6 items and no Member Directory', async () => {
+    await login('librarian@library.org', 'Librarian@123'); eq(await navCount(), 6);
     ok(!(await page.locator('#sidebarNav').textContent()).includes('Member Directory'), 'members visible'); ok(!(await page.locator('#exportCsvBtn').isVisible()), 'export visible'); await logout();
   });
 

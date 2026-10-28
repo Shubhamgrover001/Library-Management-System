@@ -4,7 +4,8 @@
   "private": true,
   "description": "LMS Portal: single-file library management web app with end-to-end tests",
   "scripts": {
-    "test": "node tests/run-all.js"
+    "test": "node tests/run-all.js",
+    "start": "node server.js"
   },
   "devDependencies": {
     "pdf-lib": "1.17.1",
