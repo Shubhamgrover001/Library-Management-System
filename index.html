@@ -96,6 +96,14 @@ button { cursor: pointer; font-weight: 500; padding: 9px 15px; border-radius: 6p
 .btn-danger-action { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; padding: 4px 8px; border-radius: 4px; }
 .btn-danger-action:hover { background: #fecaca; }
 .btn-sm { padding: 4px 10px; font-size: 0.75rem; }
+.cover-thumb { width: 28px; height: 40px; object-fit: cover; border-radius: 3px; vertical-align: middle; margin-right: 8px; border: 1px solid var(--border); }
+.cover-big { display: block; max-width: 140px; max-height: 200px; margin: 0 auto 12px; border-radius: 4px; border: 1px solid var(--border); }
+.receipt { border: 1px dashed var(--border); border-radius: 6px; padding: 16px; font-size: 0.88rem; }
+.receipt h4 { text-align: center; margin-bottom: 8px; color: var(--text-heading); }
+.receipt table { width: 100%; }
+.receipt td { padding: 4px 0; border: 0; }
+.receipt td:last-child { text-align: right; font-weight: 600; }
+@media print { body * { visibility: hidden !important; } #receiptModal, #receiptModal .receipt, #receiptModal .receipt * { visibility: visible !important; } #receiptModal { position: absolute; inset: 0; background: #fff; display: block !important; } #receiptModal .receipt { color: #000; border: 0; } }
 table { width: 100%; border-collapse: collapse; font-size: 0.86rem; color: var(--text); min-width: 500px; }
 th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
 th { background-color: var(--table-header); color: var(--text); font-weight: 600; text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.5px; }
@@ -252,6 +260,7 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
 <div id="bookDetailModal" class="modal-backdrop">
   <div class="modal-card">
     <h3 style="margin-bottom: 16px; color: var(--text-heading);">📖 Book Catalog Details</h3>
+    <img id="detCover" class="cover-big" alt="Book cover" style="display:none;" />
     <div class="form-group"><label><b>🏷 ISBN Code:</b></label><div id="detIsbn" style="color: var(--text-heading);"></div></div>
     <div class="form-group"><label><b>📚 Title:</b></label><div id="detTitle" style="color: var(--text-heading);"></div></div>
     <div class="form-group"><label><b>✍️ Author:</b></label><div id="detAuthor" style="color: var(--text-heading);"></div></div>
@@ -322,6 +331,7 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
     <div class="form-group"><label>📚 Total Copies <span style="opacity:.7">(available copies are calculated from active loans)</span></label><input type="number" id="newBookCopies" value="1" min="1" /></div>
     <div class="form-group"><label>💰 Price (₹) <span style="opacity:.7">(readers pay this to own the full book)</span></label><input type="number" id="newBookPrice" value="199" min="0" step="1" /></div>
     <div class="form-group"><label>📄 E-Book PDF <span style="opacity:.7">(optional, max 12 MB)</span></label><input type="file" id="newBookPdf" accept="application/pdf,.pdf" /><div id="newBookPdfNote" style="font-size:.75rem; opacity:.7; margin-top:4px;"></div></div>
+    <div class="form-group"><label>🖼 Cover Image <span style="opacity:.7">(optional, PNG/JPG/WebP, max 2 MB)</span></label><input type="file" id="newBookCover" accept="image/png,image/jpeg,image/webp" /><div id="newBookCoverNote" style="font-size:.75rem; opacity:.7; margin-top:4px;"></div><label style="font-size:.8rem; margin-top:4px; display:none;" id="removeCoverRow"><input type="checkbox" id="removeCover" style="width:auto;" /> Remove current cover</label></div>
     <div class="btn-group">
       <button class="btn-primary" style="flex:1;" onclick="saveBookRecord()">💾 Save Book</button>
       <button class="btn-outline" onclick="closeBookModal()">❌ Cancel</button>
@@ -350,6 +360,15 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
 </div>
 
 <!-- RETURN -->
+<div id="receiptModal" class="modal-backdrop">
+  <div class="modal-card">
+    <div class="receipt" id="receiptBody"></div>
+    <div class="btn-group" style="margin-top:16px;">
+      <button class="btn-primary" style="flex:1;" onclick="window.print()">🖨 Print</button>
+      <button class="btn-outline" onclick="$('receiptModal').style.display='none'">❌ Close</button>
+    </div>
+  </div>
+</div>
 <div id="fineModal" class="modal-backdrop">
   <div class="modal-card">
     <h3 style="margin-bottom: 12px; color: var(--text-heading);">🔄 Return Book &amp; Tenure Summary</h3>
@@ -481,7 +500,7 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
     <!-- BOOKS -->
     <section id="view-books" class="view-section">
       <div class="card">
-        <div class="card-title"><span>📚 Book Inventory Management</span><input type="text" id="bookSearch" placeholder="🔍 Search title, author, genre, ISBN..." oninput="renderBooks()" style="max-width:280px;" /><button class="btn-primary" onclick="openBookModalForAdd()">+ Add New Book</button></div>
+        <div class="card-title"><span>📚 Book Inventory Management</span><input type="text" id="bookSearch" placeholder="🔍 Search title, author, genre, ISBN..." oninput="renderBooks()" style="max-width:240px;" /><select id="bookGenre" onchange="renderBooks()" style="max-width:150px;" aria-label="Filter by genre"><option value="">All genres</option></select><button class="btn-primary" onclick="openBookModalForAdd()">+ Add New Book</button></div>
         <table>
           <thead><tr><th>🏷 ISBN</th><th>📚 Title</th><th>✍️ Author</th><th>🏷 Genre</th><th>📦 Available / Total</th><th>💰 Price</th><th>⚙️ Action</th></tr></thead>
           <tbody id="bookTableBody"></tbody>
@@ -492,7 +511,7 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
     <!-- MEMBERS -->
     <section id="view-members" class="view-section">
       <div class="card">
-        <div class="card-title"><span>👥 Registered Members Directory</span><input type="text" id="memberSearch" placeholder="🔍 Search name, email, ID..." oninput="renderMembers()" style="max-width:260px;" /><button class="btn-primary" onclick="openMemberModalForAdd()">+ Register Member</button></div>
+        <div class="card-title"><span>👥 Registered Members Directory</span><input type="text" id="memberSearch" placeholder="🔍 Search name, email, ID..." oninput="renderMembers()" style="max-width:220px;" /><select id="memberLoan" onchange="renderMembers()" style="max-width:140px;" aria-label="Filter members"><option value="">All members</option><option value="on">With loans</option><option value="none">No loans</option></select><button class="btn-primary" onclick="openMemberModalForAdd()">+ Register Member</button></div>
         <table>
           <thead><tr><th>🏷 Member ID</th><th>👤 Full Name</th><th>📧 Email</th><th>📞 Contact</th><th>📚 Books on Loan</th><th>⚙️ Action</th></tr></thead>
           <tbody id="memberTableBody"></tbody>
@@ -530,7 +549,7 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
       <div class="card">
         <div class="card-title">💰 Fine Payment History</div>
         <table>
-          <thead><tr><th>🏷 Txn ID</th><th>👤 Member</th><th>📚 Book</th><th>📅 Returned</th><th>⏳ Days Late</th><th>💰 Fine</th><th>💳 Payment</th></tr></thead>
+          <thead><tr><th>🏷 Txn ID</th><th>👤 Member</th><th>📚 Book</th><th>📅 Returned</th><th>⏳ Days Late</th><th>💰 Fine</th><th>💳 Payment</th><th>🧾 Receipt</th></tr></thead>
           <tbody id="fineHistoryBody"></tbody>
         </table>
       </div>
@@ -577,7 +596,7 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
       <div class="card" id="subCard"></div>
       <div class="card">
         <div class="card-title">📚 Digital E-Library</div>
-        <div class="form-group"><input type="text" id="userBookSearch" placeholder="🔍 Search e-books by title or author..." oninput="renderUserViews()" /></div>
+        <div class="row"><div class="form-group"><input type="text" id="userBookSearch" placeholder="🔍 Search e-books by title or author..." oninput="renderUserViews()" /></div><div class="form-group"><select id="userGenre" onchange="renderUserViews()" aria-label="Filter by genre"><option value="">All genres</option></select></div><div class="form-group"><select id="userAvail" onchange="renderUserViews()" aria-label="Filter by availability"><option value="">Any availability</option><option value="avail">Available now</option><option value="pdf">Has e-book PDF</option></select></div></div>
         <table>
           <thead><tr><th>📚 Title</th><th>✍️ Author</th><th>📦 Copies</th><th>📥 Action</th></tr></thead>
           <tbody id="userCatalogBody"></tbody>
@@ -658,6 +677,16 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
           <div class="password-wrapper"><input type="password" id="confirmPassInput" placeholder="Confirm new password" autocomplete="new-password" /><button type="button" class="toggle-password" aria-label="Show or hide password" data-action="toggle-pw" data-target="confirmPassInput">👁</button></div>
         </div>
         <div style="margin-bottom: 24px;"><button class="btn-primary" onclick="handlePasswordReset()">🔒 Reset Password Securely</button></div>
+
+        <div id="backupSection" style="display:none; margin-bottom: 24px;">
+          <h4 style="font-size: 0.95rem; color: var(--text-heading); margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 6px;">💾 Backup &amp; Restore (Admin)</h4>
+          <p style="font-size:.82rem; opacity:.8; margin-bottom:10px;">Download all library records as one file, or restore them from a backup. E-book PDFs are stored per browser and are not included.</p>
+          <div class="btn-group" style="margin-top:0;">
+            <button class="btn-primary" onclick="downloadBackup()">📥 Download Backup</button>
+            <button class="btn-outline" onclick="$('restoreFile').click()">📤 Restore from File</button>
+            <input type="file" id="restoreFile" accept="application/json,.json" style="display:none;" onchange="restoreBackup(this)" />
+          </div>
+        </div>
 
         <h4 style="font-size: 0.95rem; color: var(--text-heading); margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 6px;">🎨 System Preferences &amp; Theme</h4>
         <div class="form-group"><label>🎨 Interface Theme Mode</label>
@@ -955,6 +984,7 @@ function setupRole(user) {
   $('settingsName').value = user.name;
   $('settingsEmail').value = user.id;
   $('exportCsvBtn').style.display = user.role === 'admin' ? '' : 'none';
+  $('backupSection').style.display = user.role === 'admin' ? '' : 'none';
   $('userPortalName').textContent = user.name;
   $('sidebarNav').innerHTML = NAV[user.role].map(([v, label]) => `<a role="button" tabindex="0" data-action="nav" data-view="${v}">${esc(label)}</a>`).join('');
   setDefaultDates();
@@ -1170,25 +1200,32 @@ function renderFines() {
   $('fineWaived').textContent = money(sum(waived));
   $('fineOutstanding').textContent = money(activeTxns().reduce((s, t) => s + fineOf(t), 0));
   $('fineHistoryBody').innerHTML = done.slice().sort((a, b) => b.returnDate.localeCompare(a.returnDate)).map(t =>
-    `<tr><td>${esc(t.id)}</td><td>${esc(memberName(t.memberId))}</td><td>${esc(bookTitle(t.isbn))}</td><td>${esc(fmtDate(t.returnDate))}</td><td>${t.fine / FINE_PER_DAY}</td><td>${money(t.fine)}</td><td>${esc(t.payMode || '-')}</td></tr>`).join('') || '<tr><td colspan="7" class="empty">No fines recorded yet</td></tr>';
+    `<tr><td>${esc(t.id)}</td><td>${esc(memberName(t.memberId))}</td><td>${esc(bookTitle(t.isbn))}</td><td>${esc(fmtDate(t.returnDate))}</td><td>${t.fine / FINE_PER_DAY}</td><td>${money(t.fine)}</td><td>${esc(t.payMode || '-')}</td><td><button class="btn-outline btn-sm" data-action="fine-receipt" data-txn="${esc(t.id)}">🧾 Receipt</button></td></tr>`).join('') || '<tr><td colspan="8" class="empty">No fines recorded yet</td></tr>';
 }
 function renderBooks() {
-  const q = $('bookSearch').value.toLowerCase().trim();
-  const rows = db.books.filter(b => !q || [b.title, b.author, b.genre, b.isbn].join(' ').toLowerCase().includes(q)).map(b => {
+  const q = $('bookSearch').value.toLowerCase().trim(), g = $('bookGenre').value;
+  const rows = db.books.filter(b => (!g || b.genre === g) && (!q || [b.title, b.author, b.genre, b.isbn].join(' ').toLowerCase().includes(q))).map(b => {
     const s = bookStats(b);
-    return `<tr class="clickable-row" tabindex="0" data-action="book-detail" data-isbn="${esc(b.isbn)}"><td>${esc(b.isbn)}</td><td>${esc(b.title)}${b.hasPdf ? ' 📄' : ''}</td><td>${esc(b.author)}</td><td>${esc(b.genre)}</td><td>${s.avail} / ${b.total}</td><td>₹${priceOf(b)}</td>
+    return `<tr class="clickable-row" tabindex="0" data-action="book-detail" data-isbn="${esc(b.isbn)}"><td>${esc(b.isbn)}</td><td>${coverImg(b)}${esc(b.title)}${b.hasPdf ? ' 📄' : ''}</td><td>${esc(b.author)}</td><td>${esc(b.genre)}</td><td>${s.avail} / ${b.total}</td><td>₹${priceOf(b)}</td>
       <td><button class="btn-outline" style="padding:4px 8px; margin-right:4px;" data-action="edit-book" data-isbn="${esc(b.isbn)}">Edit</button><button class="btn-danger-action" data-action="delete-book" data-isbn="${esc(b.isbn)}">Delete</button></td></tr>`;
   }).join('');
   $('bookTableBody').innerHTML = rows || '<tr><td colspan="7" class="empty">No books in inventory</td></tr>';
 }
 function renderMembers() {
-  const q = $('memberSearch').value.toLowerCase().trim();
-  const rows = db.members.filter(m => !q || [m.name, m.email, m.id].join(' ').toLowerCase().includes(q)).map(m =>
+  const q = $('memberSearch').value.toLowerCase().trim(), lf = $('memberLoan').value;
+  const rows = db.members.filter(m => (!lf || (lf === 'on') === (loansOf(m.id) > 0)) && (!q || [m.name, m.email, m.id].join(' ').toLowerCase().includes(q))).map(m =>
     `<tr><td>${esc(m.id)}</td><td>${esc(m.name)}</td><td>${esc(m.email)}</td><td>+91 ${esc(m.contact)}</td><td>${loansOf(m.id)}</td>
       <td><button class="btn-outline" style="padding:4px 8px; margin-right:4px;" data-action="edit-member" data-id="${esc(m.id)}">Edit</button><button class="btn-danger-action" data-action="delete-member" data-id="${esc(m.id)}">Delete</button></td></tr>`).join('');
   $('memberTableBody').innerHTML = rows || '<tr><td colspan="6" class="empty">No members registered</td></tr>';
 }
+function fillGenres(id) {
+  const el = $(id), prev = el.value;
+  const gs = Array.from(new Set(db.books.map(b => b.genre).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+  el.innerHTML = '<option value="">All genres</option>' + gs.map(g => `<option value="${esc(g)}">${esc(g)}</option>`).join('');
+  if (gs.includes(prev)) el.value = prev;
+}
 function renderLists() {
+  fillGenres('bookGenre'); fillGenres('userGenre');
   $('bookList').innerHTML = db.books.map(b => `<option value="${esc(b.title)}"></option>`).join('');
   $('memberList').innerHTML = db.members.map(m => `<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('');
 }
@@ -1238,10 +1275,10 @@ function renderUserViews() {
   if (!currentUser || currentUser.role !== 'user') return;
   renderReaderStore();
   const wish = db.wishlist[currentUser.id] || [];
-  const q = $('userBookSearch').value.toLowerCase().trim();
-  const cat = db.books.filter(b => !q || (b.title + ' ' + b.author).toLowerCase().includes(q)).map(b => {
+  const q = $('userBookSearch').value.toLowerCase().trim(), ug = $('userGenre').value, ua = $('userAvail').value;
+  const cat = db.books.filter(b => (!ug || b.genre === ug) && (ua !== 'avail' || bookStats(b).avail > 0) && (ua !== 'pdf' || b.hasPdf) && (!q || (b.title + ' ' + b.author).toLowerCase().includes(q))).map(b => {
     const s = bookStats(b), starred = wish.includes(b.isbn);
-    return `<tr><td>${esc(b.title)}</td><td>${esc(b.author)}</td><td>${s.avail > 0 ? `<span class="badge badge-success">${s.avail} available</span>` : '<span class="badge badge-warning">All on loan</span>'}</td>
+    return `<tr><td>${coverImg(b)}${esc(b.title)}</td><td>${esc(b.author)}</td><td>${s.avail > 0 ? `<span class="badge badge-success">${s.avail} available</span>` : '<span class="badge badge-warning">All on loan</span>'}</td>
       <td>${pdfButtons(b)} ${libBtn(b)} <button class="btn-top" data-action="wishlist" data-isbn="${esc(b.isbn)}">${starred ? '⭐ Saved' : '☆ Save'}</button></td></tr>`;
   }).join('');
   $('userCatalogBody').innerHTML = cat || '<tr><td colspan="4" class="empty">No books found</td></tr>';
@@ -1267,6 +1304,7 @@ function openBookModalForAdd() {
   $('newBookIsbn').readOnly = false;
   $('newBookCopies').value = '1';
   $('newBookPdf').value = ''; $('newBookPdfNote').textContent = ''; $('newBookPrice').value = '199';
+  $('newBookCover').value = ''; $('newBookCoverNote').textContent = ''; $('removeCover').checked = false; $('removeCoverRow').style.display = 'none';
   $('bookModal').style.display = 'flex';
 }
 function openBookModalForEdit(isbn) {
@@ -1278,10 +1316,26 @@ function openBookModalForEdit(isbn) {
   $('newBookCopies').value = b.total;
   $('newBookPrice').value = priceOf(b);
   $('newBookPdf').value = '';
+  $('newBookCover').value = ''; $('removeCover').checked = false; $('removeCoverRow').style.display = b.cover ? '' : 'none';
+  $('newBookCoverNote').textContent = b.cover ? 'A cover is set (choose a file to replace it).' : 'No cover yet.';
   $('newBookPdfNote').textContent = b.hasPdf ? `Current PDF: ${b.pdfName || 'uploaded'} (choose a file to replace it)` : 'No PDF uploaded yet.';
   $('bookModal').style.display = 'flex';
 }
 function closeBookModal() { $('bookModal').style.display = 'none'; editBookIsbn = null; }
+const COVER_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+const coverImg = b => /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/.test(b.cover || '') ? `<img class="cover-thumb" src="${b.cover}" alt="" />` : '';
+async function makeCover(file) { // shrink to a small JPEG so the data file stays light
+  if (!COVER_TYPES.includes(file.type) || file.size > 2 * 1024 * 1024) { toast('❌ Cover must be a PNG, JPG or WebP image under 2 MB.'); return null; }
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    const k = Math.min(1, 240 / Math.max(img.width, img.height));
+    const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(img.width * k)); c.height = Math.max(1, Math.round(img.height * k));
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', 0.8);
+  } catch (e) { toast('❌ That file is not a readable image.'); return null; }
+  finally { URL.revokeObjectURL(url); }
+}
 async function validPdf(f) {
   if (f.size > 12 * 1024 * 1024) { toast('❌ PDF is larger than 12 MB. Please compress it and try again.'); return false; }
   const head = await f.slice(0, 5).text();
@@ -1299,14 +1353,18 @@ async function saveBookRecord() {
   if (!Number.isFinite(price) || price < 0) { toast('❌ Enter a valid price (0 or more).'); return; }
   const pdf = ($('newBookPdf').files || [])[0] || null;
   if (pdf && !(await validPdf(pdf))) return;
+  const coverFile = ($('newBookCover').files || [])[0] || null;
+  let cover = null;
+  if (coverFile) { cover = await makeCover(coverFile); if (!cover) return; }
   if (editBookIsbn) {
     const b = bookByIsbn(editBookIsbn), out = bookStats(b).out;
     if (total < out) { toast(`❌ ${out} copies are currently on loan; total can't be lower.`); return; }
     Object.assign(b, { title, author, genre, total, price });
+    if (cover) b.cover = cover; else if ($('removeCover').checked) delete b.cover;
     toast('Book record updated successfully!');
   } else {
     if (db.books.some(b => b.isbn.toLowerCase() === isbn.toLowerCase())) { toast('❌ A book with this ISBN already exists.'); return; }
-    db.books.push({ isbn, title, author, genre, total, price });
+    db.books.push(Object.assign({ isbn, title, author, genre, total, price }, cover ? { cover } : {}));
     toast(`Book "${title}" added to inventory!`);
   }
   if (pdf) {
@@ -1330,6 +1388,7 @@ function showBookDetails(isbn) {
   const b = bookByIsbn(isbn); if (!b) return;
   detailIsbn = isbn;
   const s = bookStats(b);
+  const dc = $('detCover'); const ci = coverImg(b); if (ci) { dc.src = b.cover; dc.style.display = 'block'; } else { dc.removeAttribute('src'); dc.style.display = 'none'; }
   $('detIsbn').textContent = b.isbn; $('detTitle').textContent = b.title; $('detAuthor').textContent = b.author; $('detGenre').textContent = b.genre;
   $('detCopies').textContent = `${s.avail} / ${b.total} copies available`;
   $('detPdfBtn').style.display = b.hasPdf ? '' : 'none';
@@ -1801,10 +1860,45 @@ function triggerSplash() {
   setTimeout(finish, 4500);
 }
 
+/* ================= RECEIPTS ================= */
+function showFineReceipt(id) {
+  const t = db.txns.find(x => x.id === id);
+  if (!t || t.status !== 'Returned' || !(t.fine > 0)) { toast('No fine receipt for this loan.'); return; }
+  const waived = t.payMode === 'Waived Off';
+  const row = (k, v) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`;
+  $('receiptBody').innerHTML = `<h4>📚 LMS Portal - Fine ${waived ? 'Waiver' : 'Receipt'}</h4><table>
+    ${row('Receipt no.', 'RC-' + t.id)}${row('Member', memberName(t.memberId) + ' (' + t.memberId + ')')}${row('Book', bookTitle(t.isbn))}
+    ${row('Issued', fmtDate(t.issueDate))}${row('Due', fmtDate(t.dueDate))}${row('Returned', fmtDate(t.returnDate))}
+    ${row('Days late', t.fine / FINE_PER_DAY)}${row('Rate', money(FINE_PER_DAY) + ' per day')}${row(waived ? 'Fine waived' : 'Fine paid', money(t.fine))}
+    ${row('Payment', t.payMode || '-')}</table><p style="text-align:center; font-size:.75rem; opacity:.7; margin-top:10px;">Computer-generated receipt</p>`;
+  $('receiptModal').style.display = 'flex';
+}
+
+/* ================= BACKUP & RESTORE ================= */
+function downloadBackup() {
+  if (!currentUser || currentUser.role !== 'admin') return;
+  const blob = new Blob([JSON.stringify({ app: 'lms-portal', exportedAt: new Date().toISOString(), db }, null, 1)], { type: 'application/json' });
+  downloadBlob(blob, 'LMS_Backup_' + todayISO() + '.json');
+  toast('📥 Backup downloaded.');
+}
+async function restoreBackup(input) {
+  const f = (input.files || [])[0]; input.value = '';
+  if (!f || !currentUser || currentUser.role !== 'admin') return;
+  let d = null;
+  try { if (f.size <= 5 * 1024 * 1024) { const j = JSON.parse(await f.text()); d = normalizeDb(j && j.app === 'lms-portal' ? j.db : null); } } catch (e) {}
+  if (!d || !d.users.some(u => u.role === 'admin')) { toast('❌ That is not a valid LMS backup file.'); return; }
+  if (!(await askConfirm(`Replace ALL current data with this backup (${d.books.length} books, ${d.members.length} members, ${d.txns.length} loans)?`, 'Restore'))) return;
+  const me = currentUser.id;
+  if (!d.users.some(u => u.id === me)) { toast('❌ Backup does not contain your account, so it was not restored.'); return; }
+  applyRemoteDb(d); saveDb();
+  toast('✅ Backup restored.');
+}
+
 /* ================= EVENT DELEGATION ================= */
 const ACTIONS = {
   'nav': el => switchView(el.dataset.view),
   'export-report': el => exportReport(el.dataset.report),
+  'fine-receipt': el => showFineReceipt(el.dataset.txn),
   'toggle-pw': el => togglePw(el.dataset.target, el),
   'recent-user': el => { $('authUsername').value = el.dataset.id; $('authPassword').focus(); },
   'book-detail': el => showBookDetails(el.dataset.isbn),
