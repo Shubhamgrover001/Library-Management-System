@@ -352,7 +352,7 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
     <div class="form-group"><label>🏷 ISBN Code</label><input type="text" id="newBookIsbn" placeholder="e.g. 978-0143425672" /></div>
     <div class="form-group"><label>📚 Book Title</label><input type="text" id="newBookTitle" placeholder="e.g. Atomic Habits" /></div>
     <div class="form-group"><label>✍️ Author Name</label><input type="text" id="newBookAuthor" placeholder="e.g. James Clear" /></div>
-    <div class="form-group"><label>🏷 Genre</label><input type="text" id="newBookGenre" placeholder="e.g. Self-Help" /></div>
+    <div class="form-group"><label>🏷 Genre</label><input type="text" id="newBookGenre" placeholder="e.g. Self-Help" /><button type="button" class="btn-outline" id="aiFillBtn" style="display:none; margin-top:6px;" onclick="aiAutofill()">✨ Auto-fill genre with AI</button><div id="aiFillNote" style="font-size:.75rem; opacity:.75; margin-top:4px;"></div></div>
     <div class="form-group"><label>📚 Total Copies <span style="opacity:.7">(available copies are calculated from active loans)</span></label><input type="number" id="newBookCopies" value="1" min="1" /></div>
     <div class="form-group"><label>💰 Price (₹) <span style="opacity:.7">(readers pay this to own the full book)</span></label><input type="number" id="newBookPrice" value="199" min="0" step="1" /></div>
     <div class="form-group"><label>📄 E-Book PDF <span style="opacity:.7">(optional, max 12 MB)</span></label><input type="file" id="newBookPdf" accept="application/pdf,.pdf" /><div id="newBookPdfNote" style="font-size:.75rem; opacity:.7; margin-top:4px;"></div></div>
@@ -445,6 +445,11 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
   <div class="content">
     <!-- DASHBOARD -->
     <section id="view-dashboard" class="view-section active">
+      <div class="card" id="aiAskCard" style="display:none;">
+        <div class="card-title">🤖 Ask the library assistant</div>
+        <div class="row"><div class="form-group"><input type="text" id="aiAskInput" maxlength="500" placeholder="e.g. Which books are overdue and who has them?" onkeydown="if(event.key==='Enter')aiAsk()" /></div><div class="form-group" style="flex:0 0 auto;"><button class="btn-primary" id="aiAskBtn" onclick="aiAsk()">Ask</button></div></div>
+        <div id="aiAskOut" aria-live="polite" style="font-size:.9rem; white-space:pre-wrap; margin-top:8px;"></div>
+      </div>
       <div class="stats-grid">
         <div class="stat-card"><div class="label">Total Collection <span class="stat-icon">📚</span></div><div class="val" id="statBooks">0</div></div>
         <div class="stat-card"><div class="label">Issued Books <span class="stat-icon">🔄</span></div><div class="val" id="statIssued">0</div></div>
@@ -619,6 +624,10 @@ th { background-color: var(--table-header); color: var(--text); font-weight: 600
       </div>
       <div class="card reminder-box" id="userReminders" aria-live="polite"></div>
       <div class="card" id="subCard"></div>
+      <div class="card" id="aiRecCard" style="display:none;">
+        <div class="card-title"><span>✨ Recommended for you</span><button class="btn-outline" id="aiRecBtn" onclick="aiRecommend()">Get suggestions</button></div>
+        <div id="aiRecOut" aria-live="polite" style="font-size:.9rem; opacity:.9;">Suggestions are based on your borrowing history.</div>
+      </div>
       <div class="card">
         <div class="card-title">📚 Digital E-Library</div>
         <div class="row"><div class="form-group"><input type="text" id="userBookSearch" placeholder="🔍 Search e-books by title or author..." oninput="renderUserViews()" /></div><div class="form-group"><select id="userGenre" onchange="renderUserViews()" aria-label="Filter by genre"><option value="">All genres</option></select></div><div class="form-group"><select id="userAvail" onchange="renderUserViews()" aria-label="Filter by availability"><option value="">Any availability</option><option value="avail">Available now</option><option value="pdf">Has e-book PDF</option></select></div></div>
@@ -1321,12 +1330,78 @@ function renderUserViews() {
     `<tr><td>${esc(b.title)}</td><td>${esc(b.author)}</td><td>${esc(b.genre)}</td><td>${pdfButtons(b)} <button class="btn-danger-action" data-action="wishlist" data-isbn="${esc(b.isbn)}">Remove</button></td></tr>`).join('') || '<tr><td colspan="4" class="empty">Your wishlist is empty. Save books from the E-Books Catalog.</td></tr>';
 }
 
+
+/* ================= AI HELPERS (optional: need server.js + ANTHROPIC_API_KEY) ================= */
+const ai = { enabled: false, busy: false };
+function aiShow() {
+  const on = ai.enabled ? '' : 'none';
+  ['aiRecCard', 'aiAskCard', 'aiFillBtn'].forEach(i => { const e = $(i); if (e) e.style.display = on; });
+}
+async function aiInit() {
+  if (!/^https?:$/.test(location.protocol)) return;
+  try {
+    const r = await fetch('/api/ai/status', { cache: 'no-store' });
+    ai.enabled = r.ok && r.headers.get('X-LMS-Sync') === '1' && !!(await r.json()).enabled;
+  } catch (e) { ai.enabled = false; }
+  aiShow();
+}
+async function aiCall(path, body) {
+  const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'AI request failed');
+  return j;
+}
+async function aiRun(btn, fn) {
+  if (ai.busy) return;
+  ai.busy = true; const label = btn.textContent; btn.disabled = true; btn.textContent = 'Thinking…';
+  try { await fn(); } catch (e) { toast('❌ ' + (e.message || 'AI request failed')); }
+  finally { ai.busy = false; btn.disabled = false; btn.textContent = label; }
+}
+function aiRecommend() {
+  return aiRun($('aiRecBtn'), async () => {
+    const mine = db.txns.filter(t => t.memberId === currentUser.memberId).map(t => bookByIsbn(t.isbn)).filter(Boolean);
+    const seen = new Set(mine.map(b => b.isbn));
+    const j = await aiCall('/api/ai/recommend', {
+      history: mine.map(b => ({ title: b.title, author: b.author, genre: b.genre })),
+      catalog: db.books.filter(b => !seen.has(b.isbn)).map(b => ({ isbn: b.isbn, title: b.title, author: b.author, genre: b.genre }))
+    });
+    const rows = j.picks.map(p => { const b = bookByIsbn(p.isbn); return b ? `<li><strong>${esc(b.title)}</strong> by ${esc(b.author)}: ${esc(p.reason)}</li>` : ''; }).join('');
+    $('aiRecOut').innerHTML = rows ? `<ul style="padding-left:18px;">${rows}</ul>` : 'No suggestions right now.';
+  });
+}
+function aiStaffContext() {
+  const t = todayISO(), nameOf = id => (db.members.find(m => m.id === id) || {}).name || id;
+  return {
+    today: t,
+    books: db.books.slice(0, 150).map(b => ({ title: b.title, author: b.author, genre: b.genre, total: b.total, available: bookStats(b).avail })),
+    activeLoans: activeTxns().slice(0, 150).map(x => ({ book: bookTitle(x.isbn), member: nameOf(x.memberId), issued: x.issueDate, due: x.dueDate, overdue: x.dueDate < t })),
+    memberCount: db.members.length
+  };
+}
+function aiAsk() {
+  const q = $('aiAskInput').value.trim();
+  if (!q) { toast('Type a question first.'); return; }
+  return aiRun($('aiAskBtn'), async () => {
+    const j = await aiCall('/api/ai/ask', { question: q, context: aiStaffContext() });
+    $('aiAskOut').textContent = j.answer || 'No answer.';
+  });
+}
+function aiAutofill() {
+  const title = $('newBookTitle').value.trim();
+  if (!title) { toast('Enter the book title first.'); return; }
+  return aiRun($('aiFillBtn'), async () => {
+    const j = await aiCall('/api/ai/book-details', { title, author: $('newBookAuthor').value.trim() });
+    if (j.genre) $('newBookGenre').value = j.genre;
+    $('aiFillNote').textContent = 'AI suggestion, please check: ' + [j.description, j.tags.length ? 'Tags: ' + j.tags.join(', ') : ''].filter(Boolean).join(' ');
+  });
+}
+
 /* ================= BOOKS ================= */
 function openBookModalForAdd() {
   editBookIsbn = null;
   $('bookModalTitle').textContent = '📖 Add New Book to Inventory';
   ['newBookIsbn', 'newBookTitle', 'newBookAuthor', 'newBookGenre'].forEach(i => { $(i).value = ''; });
-  $('newBookIsbn').readOnly = false;
+  $('newBookIsbn').readOnly = false; $('aiFillNote').textContent = '';
   $('newBookCopies').value = '1';
   $('newBookPdf').value = ''; $('newBookPdfNote').textContent = ''; $('newBookPrice').value = '199';
   $('newBookCover').value = ''; $('newBookCoverNote').textContent = ''; $('removeCover').checked = false; $('removeCoverRow').style.display = 'none';
@@ -1334,7 +1409,7 @@ function openBookModalForAdd() {
 }
 function openBookModalForEdit(isbn) {
   const b = bookByIsbn(isbn); if (!b) return;
-  editBookIsbn = isbn;
+  editBookIsbn = isbn; $('aiFillNote').textContent = '';
   $('bookModalTitle').textContent = '✏️ Edit Book Record';
   $('newBookIsbn').value = b.isbn; $('newBookIsbn').readOnly = true;
   $('newBookTitle').value = b.title; $('newBookAuthor').value = b.author; $('newBookGenre').value = b.genre;
@@ -1983,6 +2058,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (!db) { db = await seedDb(); saveDb(); }
   else if (sync.on && sync.dirty) schedulePush(); // empty server: upload what we have
   syncBadge('ok');
+  aiInit();
   setInterval(pollSync, 5000);
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {}); // offline support
   renderRecentLogins();
