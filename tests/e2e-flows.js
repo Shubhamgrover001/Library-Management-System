@@ -4,7 +4,7 @@
 const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
-const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
+const URL = 'file://' + path.resolve(__dirname, '..', 'public', 'index.html');
 
 let pass = 0, fail = 0;
 const failures = [];

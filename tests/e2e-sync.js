@@ -17,7 +17,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 let srv = null;
 async function startServer() {
-  srv = spawn(process.execPath, [path.join(root, 'server.js')], { env: Object.assign({}, process.env, { PORT: String(PORT), HOST: '127.0.0.1', LMS_DATA: dataFile }), stdio: 'ignore' });
+  srv = spawn(process.execPath, [path.join(root, 'server', 'server.js')], { env: Object.assign({}, process.env, { PORT: String(PORT), HOST: '127.0.0.1', LMS_DATA: dataFile }), stdio: 'ignore' });
   for (let i = 0; i < 50; i++) { try { await fetch(BASE + '/api/rev'); return; } catch (e) { await sleep(100); } }
   throw new Error('server did not start');
 }

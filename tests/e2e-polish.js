@@ -12,7 +12,7 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
 
 (async () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'lms-pol-'));
-  const srv = spawn(process.execPath, [path.join(root, 'server.js')], { env: Object.assign({}, process.env, { PORT: String(PORT), LMS_DATA: path.join(tmp, 'd.json') }), stdio: 'ignore' });
+  const srv = spawn(process.execPath, [path.join(root, 'server', 'server.js')], { env: Object.assign({}, process.env, { PORT: String(PORT), LMS_DATA: path.join(tmp, 'd.json') }), stdio: 'ignore' });
   for (let i = 0; i < 50; i++) { try { await fetch(BASE + '/api/rev'); break; } catch (e) { await sleep(100); } }
   const browser = await chromium.launch();
   try {

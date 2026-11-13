@@ -3,3 +3,4 @@
 .fake.pdf
 node_modules/
 data/
+tests/results.json
