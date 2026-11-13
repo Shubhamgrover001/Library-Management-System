@@ -17,10 +17,23 @@ A single-file web app (HTML/CSS/vanilla JS) for managing a library: books, membe
 - Optional sync server (`npm start`) so several devices share one library
 - Installable app (PWA): add to home screen, opens offline from cache (needs http/https, e.g. via `npm start`)
 
-## Run
-Open `index.html` in any modern browser (internet is needed once per preview to load `pdf-lib` from a CDN). Data then lives in that browser only.
+## Project structure
+```
+public/            the web app (served as the site root)
+  index.html         the whole app: HTML, CSS and JavaScript
+  sw.js              service worker (offline support)
+  manifest.webmanifest, icon-192.png, icon-512.png   installable-app files
+server/
+  server.js          optional Node server: shared data sync + AI helper routes
+tests/               end-to-end tests (Playwright) and the test runner
+.github/workflows/   CI: runs npm test on Node 20 and 22
+data/                created at run time by the server (git-ignored)
+```
 
-**Shared data across devices:** run `npm start` (or `node server.js`, no packages needed) and open http://127.0.0.1:3000. The server keeps the data in `data/lms-data.json`. Settings: `PORT`, `HOST` (default `127.0.0.1`), `LMS_DATA`. If two devices save at the same time, the second one is asked to repeat its change. Login is still checked in the browser, so keep the server on a trusted network and do not expose it to the internet.
+## Run
+Open `public/index.html` in any modern browser (internet is needed once per preview to load `pdf-lib` from a CDN). Data then lives in that browser only.
+
+**Shared data across devices:** run `npm start` (or `node server/server.js`, no packages needed) and open http://127.0.0.1:3000. The server keeps the data in `data/lms-data.json`. Settings: `PORT`, `HOST` (default `127.0.0.1`), `LMS_DATA`. If two devices save at the same time, the second one is asked to repeat its change. Login is still checked in the browser, so keep the server on a trusted network and do not expose it to the internet.
 
 Demo logins: `admin@library.org` / `Admin@123` · `librarian@library.org` / `Librarian@123`
 
@@ -30,7 +43,7 @@ Demo logins: `admin@library.org` / `Admin@123` · `librarian@library.org` / `Lib
 ```bash
 npm install                          # installs Playwright and pdf-lib (dev dependencies)
 npx playwright install chromium      # one-time browser download
-npm test                             # runs all suites: tests/e2e.js (35), tests/e2e-flows.js (69), tests/e2e-sync.js (25), tests/e2e-polish.js (18)
+npm test                             # runs all suites: tests/e2e.js (35), tests/e2e-flows.js (69), tests/e2e-sync.js (25), tests/e2e-polish.js (18), tests/e2e-ai.js (22)
 ```
 
 `npm test` starts its own local server on port 8765, so nothing else needs to be running. The same command runs in GitHub Actions on every push (`.github/workflows/node.js.yml`).

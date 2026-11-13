@@ -1,6 +1,6 @@
 /* LMS Portal sync server: zero dependencies, Node 18+.
- *   node server.js            (or: npm start)
- * Serves index.html and keeps the app data in a JSON file so every browser and
+ *   node server/server.js     (or: npm start)
+ * Serves the files in public/ and keeps the app data in a JSON file so every browser and
  * device that opens the portal sees the same library. If no server is running,
  * index.html still works on its own with browser storage.
  *
@@ -20,7 +20,8 @@ const path = require('path');
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '127.0.0.1';
-const DATA = path.resolve(process.env.LMS_DATA || path.join(__dirname, 'data', 'lms-data.json'));
+const DATA = path.resolve(process.env.LMS_DATA || path.join(__dirname, '..', 'data', 'lms-data.json'));
+const PUBLIC_DIR = path.join(__dirname, '..', 'public'); // the web app: index.html, sw.js, manifest, icons
 const MAX_BODY = 5 * 1024 * 1024;
 const STATIC = { '.html': 'text/html; charset=utf-8', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.mp4': 'video/mp4', '.webm': 'video/webm' };
 
@@ -158,7 +159,7 @@ const server = http.createServer((req, res) => {
   const ext = path.extname(name).toLowerCase();
   const isSw = name === 'sw.js'; // the only script we serve (never server.js)
   if (name.includes('/') || name.includes('\\') || name.startsWith('.') || !(STATIC[ext] || isSw)) { res.writeHead(404); return res.end('not found'); }
-  fs.readFile(path.join(__dirname, name), (err, data) => {
+  fs.readFile(path.join(PUBLIC_DIR, name), (err, data) => {
     if (err) { res.writeHead(404); return res.end('not found'); }
     const headers = { 'Content-Type': isSw ? 'text/javascript; charset=utf-8' : STATIC[ext], 'X-Content-Type-Options': 'nosniff' };
     if (isSw) headers['Cache-Control'] = 'no-cache'; // browsers must always check for a new worker

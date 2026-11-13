@@ -33,7 +33,7 @@ const upstream = http.createServer((req, res) => {
 
 function startServer(env) {
   return new Promise(async (resolve, reject) => {
-    const s = spawn(process.execPath, [path.join(root, 'server.js')], { env: Object.assign({}, process.env, { PORT: String(PORT), HOST: '127.0.0.1', LMS_DATA: path.join(tmp, 'd' + Math.random() + '.json'), ANTHROPIC_API_KEY: '', AI_URL: '' }, env), stdio: 'ignore' });
+    const s = spawn(process.execPath, [path.join(root, 'server', 'server.js')], { env: Object.assign({}, process.env, { PORT: String(PORT), HOST: '127.0.0.1', LMS_DATA: path.join(tmp, 'd' + Math.random() + '.json'), ANTHROPIC_API_KEY: '', AI_URL: '' }, env), stdio: 'ignore' });
     for (let i = 0; i < 50; i++) { try { await fetch(BASE + '/api/rev'); return resolve(s); } catch (e) { await sleep(100); } }
     reject(new Error('server did not start'));
   });
