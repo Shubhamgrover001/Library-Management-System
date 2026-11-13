@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-27T15:43:59.984Z",
+  "date": "2026-11-13T00:45:23.827Z",
   "pass": 35,
   "total": 35,
   "results": [
@@ -10,7 +10,7 @@
     },
     {
       "id": "T02",
-      "name": "Admin sees 6 menu items; CSV export visible",
+      "name": "Admin sees 7 menu items; CSV export visible",
       "pass": true
     },
     {
@@ -70,7 +70,7 @@
     },
     {
       "id": "T14",
-      "name": "Librarian sees 5 items and no Member Directory",
+      "name": "Librarian sees 6 items and no Member Directory",
       "pass": true
     },
     {
